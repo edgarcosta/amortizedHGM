@@ -1,6 +1,12 @@
 # amortizedHGM
 
 
+Sage code supporting 
+ - **Hypergeometric L-functions in average polynomial time** by Edgar Costa, Kiran Kedlaya and David Roe
+ 
+Available at [arXiv:2005.13640](https://arxiv.org/abs/2005.13640)
+ and to appear in the proceedings of the 2020 Algorithmic Number Theory Symposium
+
 ```
 sage: from hgm import AmortizingHypergeometricData
 ....: H = AmortizingHypergeometricData(10**2,   cyclotomic=([4,2,2], [3,3]))
