@@ -6,6 +6,8 @@ Sage code supporting
  
 Available at [arXiv:2005.13640](https://arxiv.org/abs/2005.13640)
  and to appear in the proceedings of the 2020 Algorithmic Number Theory Symposium
+ 
+The code will run significantly faster if linked against the library [rforest](https://math.mit.edu/~drew/)
 
 ```
 sage: from hgm import AmortizingHypergeometricData
