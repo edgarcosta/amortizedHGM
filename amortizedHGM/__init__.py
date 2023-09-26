@@ -1,0 +1,3 @@
+from .hgm import AmortizingHypergeometricData, AccRemForest
+assert AccRemForest
+assert AmortizingHypergeometricData
