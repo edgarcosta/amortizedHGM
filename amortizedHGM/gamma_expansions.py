@@ -265,7 +265,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         logfac = truncated_log_mod(-harmonics[1][p][0,1], e, pe) # = log -(p-1)!
         tmp = vector([logfac] + [moddiv_int(-(-p)**j*harmonics[j][p][0,0], j*harmonics[j][p][0,1], pe) for j in range(1,e-1)])
         tmp *= mat
-        return [0] + [moddiv_int(tmp[i], den, pe).divide_knowing_divisible_by(p**(i+1)) for i in range(e-1)]
+        return [moddiv_int(tmp[i], den, pe).divide_knowing_divisible_by(p**(i+1)) for i in range(e-2,-1,-1)] + [0]
 
     @lazy_attribute
     def _expansion_at_0(self):
@@ -335,8 +335,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             x = R.gen()
             if d == 1:
                 for p, s in zero_exp.items():
-                    l = s[::-1] # reversed to facilitate use of Horner's method
-                    s = eval_poly_as_gen(l, x)
+                    s = eval_poly_as_gen(s, x)
                     self.cache[0, 1, p] = (one, 1, s)
                     self.cache[1, 1, p] = (minusone, 1, s)
             else:
@@ -350,17 +349,15 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
                             # Combine the expansion at 0 with the contribution from harmonic sums,
                             # then recenter the log expansion.
-                            l = s[::-1] # reversed to facilitate use of Horner's method
-                            s = eval_poly_as_gen(l, x)
-                            l = [s[e-1-i] for i in range(e)]
-                            gamma_translate(l, p, harmonics, e, p**e, b, d, normalized)
+                            l = s[::]
+                            gamma_translate(l, p, harmonics, e, b, d, normalized)
 
                             # If not normalized, extract the constant term.
                             c0 = Z1 if normalized else harmonics[1][p][0,1]
 
                             # Return the computed expansion.
                             sgn, i = divmod(-b*p, d) # computes both quotient and remainder
-                            self.cache[i, d, p] = (-c0 if sgn%2 else c0, 1, eval_poly_as_gen(l, 1*x))
+                            self.cache[i, d, p] = (-c0 if sgn%2 else c0, 1, eval_poly_as_gen(l, x))
 
                             # Exploit the Legendre relation for Gamma_p to return another expansion for free.
-                            self.cache[d-i, d, p] = (c0, -1, -eval_poly_as_gen(l, -1*x))
+                            self.cache[d-i, d, p] = (c0, -1, -eval_poly_as_gen(l, -x))

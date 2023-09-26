@@ -125,11 +125,11 @@ cpdef truncated_exp(x, int e):
     return tmp
 
 cpdef int gamma_translate(l, Integer p, harmonics, int e,
-                      Integer pe, Integer b, Integer d, int normalized) except -1:
+                      Integer b, Integer d, int normalized) except -1:
     # Computes an inner loop in the computation of Gamma_p(x+c).
 
     cdef int i, j
-    cdef Integer tmp = Integer(1)
+    cdef Integer tmp = Integer(1), pe = p**e
 
     # Combine the expansion at 0 with the contribution from harmonic sums.
     # Note that l starts out representing the *reversed* expansion at 0.
