@@ -6,7 +6,7 @@ from sage.functions.other import floor, factorial, frac as frac
 from sage.interfaces.magma import magma
 from sage.matrix.constructor import Matrix, matrix
 from sage.matrix.special import block_matrix, zero_matrix, identity_matrix
-from sage.misc.cachefunc import cached_method, cached_function
+from sage.misc.cachefunc import cached_method
 from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.misc_c import prod
 from sage.modular.hypergeometric_motive import enumerate_hypergeometric_data, HypergeometricData
@@ -22,6 +22,7 @@ from sage.rings.rational_field import QQ
 from pyrforest import remainder_forest
 
 from .hgm_misc import mbound_dict_c
+from .accremforest import AccRemForest
 
 
 
@@ -96,81 +97,6 @@ def finitediff(k, M, a=0):
             # Mfd[i]
             yield Mfd[n]
 
-
-
-
-
-
-
-
-
-
-
-def print_bottom_tree(tree, levels=2, spaces=4, print_shift=0):
-    """
-    This utility function is used to print trees for visualization
-
-    INPUT:
-
-    - ``tree`` -- a list of even length; the 0th entry is ignored.
-        The 1st entry is the root, then the children of the nth node are at 2n and 2n+1
-    - ``levels`` -- how many levels of the tree to print (starting at the bottom)
-    - ``spaces`` -- how many spaces are allocated to each entry along the bottom of the tree.
-        Will look best if this is even
-    - ``print_shift`` -- used for recursion; how many spaces to add at the beginning of the bottom line.
-
-    EXAMPLES::
-
-        sage: tree = build_tree(list(range(1,8)))
-        sage: print_bottom_tree(tree)
-          2       12      30      7
-        1   2   3   4   5   6
-        sage: print_bottom_tree(tree, levels=3)
-              24              210
-          2       12      30      7
-        1   2   3   4   5   6
-        sage: print_bottom_tree(tree, levels=4)
-                      5040
-              24              210
-          2       12      30      7
-        1   2   3   4   5   6
-    """
-    if levels > 0:
-        n = len(tree) // 2
-        shift = base_shift(n)
-        print_bottom_tree(
-            tree[:-shift], levels - 1, 2 * spaces, print_shift=print_shift + spaces // 2
-        )
-        print(
-            " " * print_shift + "".join(str(elt).ljust(spaces) for elt in tree[-shift:])
-        )
-
-
-
-def padic_gauss_sum(a, p, f, prec=20, factored=False, algorithm='pari', parent=None):
-    # Copied from Sage
-    from sage.rings.padics.factory import Zp
-    from sage.rings.all import PolynomialRing
-
-    q = p**f
-    a = a % (q-1)
-    if parent is None:
-        R = Zp(p, prec)
-    else:
-        R = parent
-    out = -R.one()
-    if a != 0:
-        t = R(1/(q-1))
-        for i in range(f):
-            out *= (a*t).gamma(algorithm)
-            a = (a*p) % (q-1)
-    s = sum(a.digits(base=p))
-    if factored:
-        return(s, out)
-    X = PolynomialRing(R, name='X').gen()
-    pi = R.ext(X**(p - 1) + p, names='pi').gen()
-    out *= pi**s
-    return out
 
 class AmortizingHypergeometricData(HypergeometricData):
     """

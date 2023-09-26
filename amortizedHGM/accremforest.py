@@ -155,6 +155,45 @@ def product_layer(layer):
         for (j, k) in zip(range(0, len(layer), 2), range(1, len(layer), 2))
     ]
 
+def print_bottom_tree(tree, levels=2, spaces=4, print_shift=0):
+    """
+    This utility function is used to print trees for visualization
+
+    INPUT:
+
+    - ``tree`` -- a list of even length; the 0th entry is ignored.
+        The 1st entry is the root, then the children of the nth node are at 2n and 2n+1
+    - ``levels`` -- how many levels of the tree to print (starting at the bottom)
+    - ``spaces`` -- how many spaces are allocated to each entry along the bottom of the tree.
+        Will look best if this is even
+    - ``print_shift`` -- used for recursion; how many spaces to add at the beginning of the bottom line.
+
+    EXAMPLES::
+
+        sage: tree = build_tree(list(range(1,8)))
+        sage: print_bottom_tree(tree)
+          2       12      30      7
+        1   2   3   4   5   6
+        sage: print_bottom_tree(tree, levels=3)
+              24              210
+          2       12      30      7
+        1   2   3   4   5   6
+        sage: print_bottom_tree(tree, levels=4)
+                      5040
+              24              210
+          2       12      30      7
+        1   2   3   4   5   6
+    """
+    if levels > 0:
+        n = len(tree) // 2
+        shift = base_shift(n)
+        print_bottom_tree(
+            tree[:-shift], levels - 1, 2 * spaces, print_shift=print_shift + spaces // 2
+        )
+        print(
+            " " * print_shift + "".join(str(elt).ljust(spaces) for elt in tree[-shift:])
+        )
+
 
 
 
