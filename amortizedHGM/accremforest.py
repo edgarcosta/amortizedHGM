@@ -1,3 +1,23 @@
+from collections import defaultdict
+
+from sage.arith.functions import lcm, LCM
+from sage.arith.misc import previous_prime
+from sage.functions.other import floor, factorial, frac as frac
+from sage.interfaces.magma import magma
+from sage.matrix.constructor import Matrix, matrix
+from sage.matrix.special import block_matrix, zero_matrix, identity_matrix
+from sage.misc.cachefunc import cached_method, cached_function
+from sage.misc.lazy_attribute import lazy_attribute
+from sage.misc.misc_c import prod
+from sage.modular.hypergeometric_motive import enumerate_hypergeometric_data, HypergeometricData
+from sage.modules.free_module_element import vector
+from sage.rings.big_oh import O
+from sage.rings.fast_arith import prime_range
+from sage.rings.finite_rings.finite_field_constructor import FiniteField as GF
+from sage.rings.integer_ring import ZZ
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from sage.rings.power_series_ring import PowerSeriesRing
+from sage.rings.rational_field import QQ
 class ShadowForest(object):
     def __init__(self, forest, multiplier):
         self.forest = forest
@@ -239,26 +259,8 @@ class AccRemForest(object):
         A dictionary giving the value `\Gamma(ceil(kp/b)) mod p^{prec}` when provided the key `p`.
         """
         return self.tree(k)._rem_tree_bottom
-from collections import defaultdict
 
-from sage.arith.functions import lcm, LCM
-from sage.arith.misc import previous_prime
-from sage.functions.other import floor, factorial, frac as frac
-from sage.interfaces.magma import magma
-from sage.matrix.constructor import Matrix, matrix
-from sage.matrix.special import block_matrix, zero_matrix, identity_matrix
-from sage.misc.cachefunc import cached_method, cached_function
-from sage.misc.lazy_attribute import lazy_attribute
-from sage.misc.misc_c import prod
-from sage.modular.hypergeometric_motive import enumerate_hypergeometric_data, HypergeometricData
-from sage.modules.free_module_element import vector
-from sage.rings.big_oh import O
-from sage.rings.fast_arith import prime_range
-from sage.rings.finite_rings.finite_field_constructor import FiniteField as GF
-from sage.rings.integer_ring import ZZ
-from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from sage.rings.power_series_ring import PowerSeriesRing
-from sage.rings.rational_field import QQ
+
 
 
 class AccRemTree(object):
