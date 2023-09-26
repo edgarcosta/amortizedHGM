@@ -29,24 +29,13 @@ cythonize_dir = "build"
 
 
 
-amortizedHGM = Extension(
-    "amortizedHGM.hgm",
-    language="c",
+hgm_misc = Extension(
+    "amortizedHGM.hgm_misc",
+    language="cython",
     sources=[
         "amortizedHGM/hgm_misc.pyx"
     ],
-    libraries=["gmp", "m"],
     include_dirs=sage_include_directories(),
-    extra_compile_args=[
-        "-O3",
-        "-fPIC",
-        "-fomit-frame-pointer",
-        "-funroll-loops",
-        "-m64",
-        "-std=gnu11",
-        "-Wno-sign-compare",
-        "-Wno-unused-function",
-    ],
 )
 
 setup(
@@ -54,7 +43,7 @@ setup(
     author="Edgar Costa",
     author_email="edgarc@mit.edu",
     url="https://github.com/edgarcosta/amortizedHGM",
-    license="MIT",
+    license="GNU General Public License, version 3",
     description='Sage code supporting "Hypergeometric L-functions in average polynomial time" by Edgar Costa, Kiran Kedlaya and David Roe',
     long_description=readfile("README.md"),  # get the long description from the README
     version=readfile("VERSION").strip(),  # the VERSION file is shared with the documentation
@@ -66,7 +55,7 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Mathematics",
-        "License :: OSI Approved :: MIT",
+        "License :: OSI Approved :: GNU General Public License, version 3",
         "Programming Language :: Python :: 3.7",
     ],  # classifiers list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
     keywords="sagemath amortizedHGM",
@@ -82,7 +71,7 @@ setup(
     ],
     packages=["amortizedHGM"],
     include_package_data=False,
-    ext_modules=cythonize([amortizedHGM]),
+    ext_modules=cythonize([hgm_misc]),
     cmdclass={"test": SageTest}  # adding a special setup command for tests
     # ext_modules = extensions,
     # cmdclass = {'test': SageTest, 'build_ext': Cython.Build.build_ext} # adding a special setup command for tests and build_ext

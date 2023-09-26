@@ -1,5 +1,4 @@
 from collections import defaultdict
-from os import path
 from sage.arith.functions import lcm
 from sage.arith.misc import previous_prime
 from sage.functions.other import floor
