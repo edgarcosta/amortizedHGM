@@ -1,23 +1,40 @@
-from collections import defaultdict
 
-from sage.arith.functions import lcm, LCM
 from sage.arith.misc import previous_prime
-from sage.functions.other import floor, factorial, frac as frac
-from sage.interfaces.magma import magma
-from sage.matrix.constructor import Matrix, matrix
-from sage.matrix.special import block_matrix, zero_matrix, identity_matrix
-from sage.misc.cachefunc import cached_method, cached_function
 from sage.misc.lazy_attribute import lazy_attribute
-from sage.misc.misc_c import prod
-from sage.modular.hypergeometric_motive import enumerate_hypergeometric_data, HypergeometricData
-from sage.modules.free_module_element import vector
-from sage.rings.big_oh import O
 from sage.rings.fast_arith import prime_range
-from sage.rings.finite_rings.finite_field_constructor import FiniteField as GF
 from sage.rings.integer_ring import ZZ
-from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from sage.rings.power_series_ring import PowerSeriesRing
-from sage.rings.rational_field import QQ
+
+def base_shift(n):
+    """
+    INPUT:
+
+    - ``n`` -- the length of a list ``base``
+
+    OUTPUT:
+
+    The index i so that when base is included as the base of a binary tree,
+    the bottom layer is base[:i] and the nodes on the second layer are base[i:]
+
+    EXAMPLES:
+
+    The numbers 1..7 are arranged along the bottom of the tree as 1..6
+    at the bottom layer and then the 7 at the layer above::
+
+        sage: base_shift(7)
+        6
+
+    If given a power of 2, all entries are on the bottom layer::
+
+        sage: base_shift(32)
+        32
+
+    If one more than a power of 2, then only two entries on the bottom layer::
+
+        sage: base_shift(17)
+        2
+    """
+    return 2 * n - next_power_of_2(n)
+
 class ShadowForest(object):
     def __init__(self, forest, multiplier):
         self.forest = forest
