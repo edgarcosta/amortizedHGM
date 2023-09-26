@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from sage.arith.functions import lcm, LCM
+from sage.arith.functions import lcm
 from sage.arith.misc import previous_prime
 from sage.functions.other import floor, factorial, frac as frac
 from sage.interfaces.magma import magma
@@ -756,7 +756,7 @@ class EAmortizingHypergeometricData(AmortizingHypergeometricData):
         gamma_prod = lambda gammas: prod(g + kappa(x) + ell + (kappa(x) + ell + 1)*x/(1-x) for g in gammas)
         beta_prod_den = prod(b + kappa(0) + ell for b in self.beta())
         alphabeta_prod = (gamma_prod(self.alpha())/(gamma_prod(self.beta())/beta_prod_den))
-        d = LCM([elt.denominator().numerator() for elt in alphabeta_prod.list()])*LCM([elt.numerator().denominator() for elt in alphabeta_prod.list()])
+        d = lcm([elt.denominator().numerator() for elt in alphabeta_prod.list()])*lcm([elt.numerator().denominator() for elt in alphabeta_prod.list()])
         eta = Phi_f_ell * self.to_matrix((self.y + z) * d * alphabeta_prod)
 
         phi = self.to_matrix(R(f_ell**(self.e - 1)*d*beta_prod_den))
