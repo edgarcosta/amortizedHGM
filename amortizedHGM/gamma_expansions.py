@@ -8,23 +8,14 @@ from sage.misc.persist import loads, dumps
 from sage.structure.unique_representation import UniqueRepresentation
 
 from pyrforest import batch_harmonic, batch_factorial, remainder_forest
-
-# for pyflakes
-def moddiv_int(a, b, m):
-    pass
-def eval_poly_as_gen(l, x):
-    pass
-def truncated_log_mod(x, e, m):
-    pass
-def truncated_exp_int(x, e):
-    pass
-def truncated_exp(x, e):
-    pass
-def gamma_translate(l, p, harmonics, e, pe, b, d, normalized):
-    pass
-load("hgm_misc.pyx")
-#load(path.join(path.dirname(path.abspath(__file__)), "hgm_misc.pyx"))
-
+from .hgm_misc import (
+    moddiv_int,
+    eval_poly_as_gen,
+    truncated_log_mod,
+    truncated_exp_int,
+    truncated_exp,
+    gamma_translate
+)
 
 class pAdicLogGammaCache(UniqueRepresentation):
     """
