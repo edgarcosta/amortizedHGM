@@ -1,19 +1,22 @@
 # Amortized computation of power series expansions of p-adic Gamma at rational arguments.
 
-from sage.all import QQ
+from sage.functions.other import binomial, factorial
 from sage.arith.srange import srange
-from sage.misc.cachefunc import cached_method
+from sage.arith.misc import gcd
+from sage.rings.fast_arith import prime_range
+from sage.rings.integer_ring import ZZ
+from sage.rings.rational_field import QQ
 from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.persist import loads, dumps
 from sage.structure.unique_representation import UniqueRepresentation
+from sage.matrix.constructor import matrix
+from sage.modules.free_module_element import vector
 
-from pyrforest import batch_harmonic, batch_factorial, remainder_forest
+from pyrforest import batch_harmonic, batch_factorial
 from .hgm_misc import (
     moddiv_int,
     eval_poly_as_gen,
     truncated_log_mod,
-    truncated_exp_int,
-    truncated_exp,
     gamma_translate
 )
 
@@ -288,7 +291,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
         harmonics, den, mat = self._expansion0_prep()
-        return {p: self._expansion0(p, harmonics, den, mat) for p in prime_range(e+1, self.N)}
+        return {p: self._expansion0(p, harmonics, den, mat) for p in prime_range(self.e+1, self.N)}
 
     def _set_expansion_at_offset(self, d, normalized=False):
         """
