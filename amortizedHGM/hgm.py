@@ -1,28 +1,28 @@
 from collections import defaultdict
-from os import path
-from sage.arith.functions import lcm
+
+from sage.arith.functions import lcm, LCM
 from sage.arith.misc import previous_prime
-from sage.functions.other import floor
-from sage.functions.other import factorial
+from sage.functions.other import floor, factorial, frac as fractional_part
 from sage.interfaces.magma import magma
-from sage.matrix.constructor import matrix
-from sage.matrix.special import identity_matrix
+from sage.matrix.constructor import Matrix, matrix
+from sage.matrix.special import block_matrix, zero_matrix, identity_matrix
 from sage.misc.cachefunc import cached_method, cached_function
 from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.misc_c import prod
 from sage.modular.hypergeometric_motive import enumerate_hypergeometric_data, HypergeometricData
 from sage.modules.free_module_element import vector
+from sage.rings.big_oh import O
 from sage.rings.fast_arith import prime_range
 from sage.rings.finite_rings.finite_field_constructor import FiniteField as GF
 from sage.rings.integer_ring import ZZ
-from sage.rings.rational_field import QQ
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.power_series_ring import PowerSeriesRing
-from sage.matrix.special import block_matrix, zero_matrix
-from sage.matrix.constructor import Matrix
-from sage.functions.other import frac as fractional_part
-from .hgm_misc import mbound_dict_c
+from sage.rings.rational_field import QQ
+
 from pyrforest import remainder_forest
+
+from .hgm_misc import mbound_dict_c
+
 
 @cached_function
 def subsitution(e, g, scalar=1):
@@ -977,11 +977,11 @@ class EAmortizingHypergeometricData(AmortizingHypergeometricData):
         S = PolynomialRing(S0, self.e, 'h')
         R = PowerSeriesRing(S.fraction_field(), 'x', default_prec=self.e)
         x = R.gen()
-        f = R(list(S.gens()))
+        # f = R(list(S.gens()))
         from_monomial = {tuple(1 if i == j else 0 for j in range(self.e)) : i for i in range(self.e)}
         x = R.gen()
         h = R(list(S.gens()))
-        pol = (a^(self.e - 1)*h((a + 1)*x/(a + x) + O(x^self.e))).padded_list(self.e)
+        pol = (a**(self.e - 1)*h((a + 1)*x/(a + x) + O(x**self.e))).padded_list(self.e)
         res = []
         for elt in pol[:self.e]:
             assert elt.denominator() == 1
@@ -1019,7 +1019,7 @@ class EAmortizingHypergeometricData(AmortizingHypergeometricData):
         phi = self.to_matrix(R(f_ell**(self.e - 1)*d*beta_prod_den))
 
 
-        w = 1 + sum(x^i * wi for i, wi in self.w.items())
+        w = 1 + sum(x**i * wi for i, wi in self.w.items())
         theta = Phi_f_ell * self.to_matrix(w( (ell + kappa(x))*x/(1-x) ))
 
         return block_matrix(S,
