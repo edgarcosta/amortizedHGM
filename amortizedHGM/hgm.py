@@ -20,6 +20,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.power_series_ring import PowerSeriesRing
 from sage.matrix.special import block_matrix, zero_matrix
 from sage.matrix.constructor import Matrix
+from sage.functions.other import frac as fractional_part
 from .hgm_misc import mbound_dict_c
 from pyrforest import remainder_forest
 
@@ -133,9 +134,6 @@ def finitediff(k, M, a=0):
             yield Mfd[n]
 
 
-
-def fractional_part(foo):
-    return foo - foo.floor()
 
 
 
