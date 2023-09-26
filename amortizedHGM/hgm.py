@@ -1,4 +1,5 @@
 from collections import defaultdict
+from os import path
 from sage.arith.functions import lcm
 from sage.arith.misc import previous_prime
 from sage.functions.other import floor
@@ -6,7 +7,7 @@ from sage.functions.other import factorial
 from sage.interfaces.magma import magma
 from sage.matrix.constructor import matrix
 from sage.matrix.special import identity_matrix
-from sage.misc.cachefunc import cached_method
+from sage.misc.cachefunc import cached_method, cached_function
 from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.misc_c import prod
 from sage.modular.hypergeometric_motive import enumerate_hypergeometric_data, HypergeometricData
@@ -15,10 +16,54 @@ from sage.rings.fast_arith import prime_range
 from sage.rings.finite_rings.finite_field_constructor import FiniteField as GF
 from sage.rings.integer_ring import ZZ
 from sage.rings.rational_field import QQ
-
-
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from sage.rings.power_series_ring import PowerSeriesRing
+from sage.matrix.special import block_matrix, zero_matrix
+from sage.matrix.constructor import Matrix
 from .hgm_misc import mbound_dict_c
 from pyrforest import remainder_forest
+
+@cached_function
+def subsitution(e, g, scalar=1):
+    r"""
+    return a matrix M that represents the linear transformation:
+        h(x) mod x^e -> h(g(x)) mod x^e
+    explicitly, if
+        h = a_0 + a_1*x + ... + a_{e-1}*x^(e-1)
+    then
+        vector([a_0, ..., a_{e-1}]) * M
+    represents
+        h(g(x)) mod x^e
+    """
+    base_ring = g.parent().base_ring()
+    S = PolynomialRing(base_ring, e, 'a')
+    R = PowerSeriesRing(S, 'x', default_prec=e)
+    from_monomial = {tuple(1 if i == j else 0 for j in range(e)) : i for i in range(e)}
+    x = R.gen()
+    h = R(list(S.gens()))
+    pol = R(scalar*h(g(x))).padded_list(e)
+    res = []
+    for elt in pol:
+        reselt = [0]*e
+        for m, v in elt.dict().items():
+            reselt[from_monomial[tuple(m)]] = v
+        res.append(reselt)
+    return Matrix(base_ring, res).transpose()
+
+
+
+
+def list_to_uppertriangular(v):
+    v = list(v)
+    e = len(v)
+    return Matrix([[0]*i + v[:e - i] for i in range(e)])
+
+def power_series_to_matrix(f, e):
+    r"""
+    convert a power series f(x) mod x^e to an e times e bandid matrix
+    """
+    return list_to_uppertriangular(f.padded_list(e))
+
 
 def finitediff(k, M, a=0):
     """
@@ -674,7 +719,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             total += term
         return total
 
-    def amortized_padic_H_values_interval(self, ans, t, start, end, pclass, fixbreak, testp=None, use_c=True):
+    def amortized_padic_H_values_interval(self, ans, t, start, end, pclass, fixbreak, testp=None, use_c=False):
         r"""
         Return a dictionary
             p -> M[p]
@@ -774,7 +819,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
 
 
-    def amortized_padic_H_values(self, t, testp=None, verbose=False, use_c=True):
+    def amortized_padic_H_values(self, t, testp=None, verbose=False, use_c=False):
         """
         INPUT:
 
@@ -870,6 +915,122 @@ class AmortizingHypergeometricData(HypergeometricData):
             am = self.amortized_padic_H_values(t, testp=testp)
             for p, val in am.items():
                 assert(self.padic_H_value(t=t, p=p, f=1) == val)
+
+class EAmortizingHypergeometricData(AmortizingHypergeometricData):
+    """
+    Compute traces modulo p^e rather than p.
+    """
+    def __init__(self, N, e, cyclotomic=None, alpha_beta=None, gamma_list=None):
+        HypergeometricData.__init__(self, cyclotomic, alpha_beta, gamma_list)
+        self.N = N
+        self.e = e
+
+    @lazy_attribute
+    def R0(self):
+        return PolynomialRing(ZZ, "y," + ",".join([f"w{i}" for i in range(1, self.e)]))
+
+    @lazy_attribute
+    def y(self):
+        return self.R0.gens()[0]
+
+    @lazy_attribute
+    def w(self):
+        """
+        sage: H(3).W
+        w2*x^2 + w1*x + 1
+        """
+        return dict(zip(range(1,self.e), self.R0.gens()[1:]))
+
+
+    def to_matrix(self, poly):
+        """
+        sage: foo = H(e=3)
+        sage: foo.to_matrix(foo.W)
+        [ 1 w1 w2]
+        [ 0  1 w1]
+        [ 0  0  1]
+        """
+        return Matrix([[poly[i-j] for i in range(self.e)] for j in range(self.e)])
+
+    @lazy_attribute
+    def Phi(self):
+        r"""
+        return a matrix M that represents the linear transformation:
+            h(x) mod x^e -> h((a + 1)x/(a + x)) mod x^e
+        explicitly, if
+            h = a_0 + a_1*x + ... + a_{e-1}*x^(e-1)
+        then
+            vector([a_0, ..., a_{e-1}]) * M
+        represents
+            h((a + 1)x/(a + x)) mod x^e
+        TEST:: (fix test)
+        sage: foo = H(e=3)
+        sage: x = foo.x
+        sage: a = 2
+        sage: F = foo.W
+        sage: rhs = a^(foo.e-1)*F((a + 1)*x/(a + x))
+        sage: lhs = foo.R((foo.to_matrix(F)*foo.Phi(a)).row(0).list())
+        sage: (rhs.denominator()*lhs - rhs.numerator() ) % x^foo.e
+        0
+        """
+
+        S0 = PolynomialRing(ZZ, 1, 'a')
+        a = S0.gen()
+        S = PolynomialRing(S0, self.e, 'h')
+        R = PowerSeriesRing(S.fraction_field(), 'x', default_prec=self.e)
+        x = R.gen()
+        f = R(list(S.gens()))
+        from_monomial = {tuple(1 if i == j else 0 for j in range(self.e)) : i for i in range(self.e)}
+        x = R.gen()
+        h = R(list(S.gens()))
+        pol = (a^(self.e - 1)*h((a + 1)*x/(a + x) + O(x^self.e))).padded_list(self.e)
+        res = []
+        for elt in pol[:self.e]:
+            assert elt.denominator() == 1
+            elt = elt.numerator()
+            reselt = [0]*self.e
+            for m, v in elt.dict().items():
+                reselt[from_monomial[tuple(m)]] = v
+            res.append(reselt)
+        return Matrix(S0, res).transpose()
+
+    def recursion_matrix(self, z, kappa):
+        """
+        kappa = a + b x = [a, b]
+        [eta, theta]
+        [0  , phi]
+        """
+        # the return matrix will have coefficients in S
+        S = PolynomialRing(self.R0, 'ell')
+        ell = S.gen()
+        R = PowerSeriesRing(S, 'x', default_prec=self.e)
+        x = R.gen()
+
+
+        # dealing with eta
+        # f_ell is not necessarily integral
+        kappa = kappa[0] + kappa[1]*x
+        f_ell = kappa[0] + kappa[1] + ell
+        Phi_f_ell = self.Phi(f_ell)
+        gamma_prod = lambda gammas: prod(g + kappa(x) + ell + (kappa(x) + ell + 1)*x/(1-x) for g in gammas)
+        beta_prod_den = prod(b + kappa(0) + ell for b in self.beta())
+        alphabeta_prod = (gamma_prod(self.alpha())/(gamma_prod(self.beta())/beta_prod_den))
+        d = LCM([elt.denominator().numerator() for elt in alphabeta_prod.list()])*LCM([elt.numerator().denominator() for elt in alphabeta_prod.list()])
+        eta = Phi_f_ell * self.to_matrix((self.y + z) * d * alphabeta_prod)
+
+        phi = self.to_matrix(R(f_ell**(self.e - 1)*d*beta_prod_den))
+
+
+        w = 1 + sum(x^i * wi for i, wi in self.w.items())
+        theta = Phi_f_ell * self.to_matrix(w( (ell + kappa(x))*x/(1-x) ))
+
+        return block_matrix(S,
+                 [[eta, theta],
+                  [zero_matrix(self.e), phi]])
+
+
+
+
 
 class ShadowForest(object):
     def __init__(self, forest, multiplier):
@@ -1227,7 +1388,7 @@ def test_padic_H_values(d, weight=1, N=ZZ(100), ts=[ZZ(3)/17, ZZ(91)/55, ZZ(1)/1
             continue
         H.test_padic_H_values(ts, testp=previous_prime(N))
 
-def compare(log2N, t, use_c=True, vssage=True, vsmagma=True,**kwds):
+def compare(log2N, t, use_c=False, vssage=True, vsmagma=True,**kwds):
     r"""
         e.g: compare(15, 1337, vssage=False, cyclotomic=([4,4,2,2], [3,3,3]))
     """
