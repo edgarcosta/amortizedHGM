@@ -1,15 +1,15 @@
-load("average_poly.pyx")
-load("gamma_expansions.py")
+from sage.functions.other import factorial, ceil
+from sage.arith.misc import power_mod, gcd
+from sage.rings.fast_arith import prime_range
+from sage.rings.integer_ring import ZZ
+from sage.rings.padics.factory import Zp
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from sage.matrix.constructor import Matrix
 
-def interpolation_polys(e, x):
-    r"""
-    Return the Lagrange interpolation polynomials in `x` for `e` evaluation points, multiplied by (e-1)!.
+from pyrforest import batch_factorial, batch_harmonic, remainder_forest
 
-    This works integrally in characteristic not less than `e`.
-    """
-    if e == 1:
-        return [x.parent().one()]
-    return [(factorial(e-1)//prod(i-j for j in range(e) if j != i))*prod(x-j for j in range(e) if j != i) for i in range(e)]
+from .gamma_expansions import pAdicLogGammaCache
+from .hgm_modpe import interpolation_polys
 
 # ****************
 # Code below is for testing purposes only
@@ -34,13 +34,15 @@ def test_batch_harmonic(n, e, a, b, j):
     return True
 
 def test_padic_log_gamma_expansion_at_0(n, e, t):
-    ans = padic_log_gamma_expansion_at_0(n, e)
+    cache = pAdicLogGammaCache(e)
+    cache.increase_N(n)
     for p in prime_range(e+1, n):
+        c, i, f = cache.expansion(0, 1, p)
         R = Zp(p, prec=e)
-        g1 = R(t*p).gamma().log()
-        g2 = ans[p](R(t))
+        g1 = R(t*p).gamma()
+        g2 = c**i * R(f(t*p), e).exp()
         if g1 != g2:
-            print(p, g1, g2, ans[p])
+            print(p, g1, g2, c, i, f)
             return False
     return True
 
@@ -88,7 +90,6 @@ def batch_pochhammer(n, e, c):
 
     ans = remainder_forest(M, m, k, kbase=1, indices=prime_range(e+1, n))
     R = ZZ['x']
-    x = R.gen()
     return {p: R([ans[p][i,0] for i in range(e)]) for p in prime_range(e+1, n)}
 
 def padic_gamma_expansion_at_0(n, e):
@@ -133,7 +134,7 @@ def padic_gamma_expansion_at_single_offset(n, e, c, zero_exp=None):
      - `c`: a rational number in (0,1). We compute a series expansion around `ceil(p*c)` for all primes `p` up to `n`, excluding primes <= e.
     """
     if not zero_exp:
-        zero_exp = padic_gamma_expansion_at_0(n, e, use_log)
+        zero_exp = padic_gamma_expansion_at_0(n, e)
     if c == 0:
         return zero_exp
     ans0 = batch_pochhammer(n, e, c)
