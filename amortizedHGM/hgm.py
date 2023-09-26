@@ -24,46 +24,9 @@ from pyrforest import remainder_forest
 from .hgm_misc import mbound_dict_c
 
 
-@cached_function
-def subsitution(e, g, scalar=1):
-    r"""
-    return a matrix M that represents the linear transformation:
-        h(x) mod x^e -> h(g(x)) mod x^e
-    explicitly, if
-        h = a_0 + a_1*x + ... + a_{e-1}*x^(e-1)
-    then
-        vector([a_0, ..., a_{e-1}]) * M
-    represents
-        h(g(x)) mod x^e
-    """
-    base_ring = g.parent().base_ring()
-    S = PolynomialRing(base_ring, e, 'a')
-    R = PowerSeriesRing(S, 'x', default_prec=e)
-    from_monomial = {tuple(1 if i == j else 0 for j in range(e)) : i for i in range(e)}
-    x = R.gen()
-    h = R(list(S.gens()))
-    pol = R(scalar*h(g(x))).padded_list(e)
-    res = []
-    for elt in pol:
-        reselt = [0]*e
-        for m, v in elt.dict().items():
-            reselt[from_monomial[tuple(m)]] = v
-        res.append(reselt)
-    return Matrix(base_ring, res).transpose()
 
 
 
-
-def list_to_uppertriangular(v):
-    v = list(v)
-    e = len(v)
-    return Matrix([[0]*i + v[:e - i] for i in range(e)])
-
-def power_series_to_matrix(f, e):
-    r"""
-    convert a power series f(x) mod x^e to an e times e bandid matrix
-    """
-    return list_to_uppertriangular(f.padded_list(e))
 
 
 def finitediff(k, M, a=0):
@@ -182,27 +145,6 @@ def print_bottom_tree(tree, levels=2, spaces=4, print_shift=0):
             " " * print_shift + "".join(str(elt).ljust(spaces) for elt in tree[-shift:])
         )
 
-
-def product_layer(layer):
-    """
-    INPUT:
-
-    - ``layer`` -- a list of even length
-
-    OUTPUT:
-
-    A list of half the length whose terms are the products of the consecutive terms of the input
-
-    EXAMPLES::
-
-        sage: layer = list(range(1,15))
-        sage: product_layer(layer)
-        [2, 12, 30, 56, 90, 132, 182]
-    """
-    return [
-        layer[j] * layer[k]
-        for (j, k) in zip(range(0, len(layer), 2), range(1, len(layer), 2))
-    ]
 
 
 def padic_gauss_sum(a, p, f, prec=20, factored=False, algorithm='pari', parent=None):
