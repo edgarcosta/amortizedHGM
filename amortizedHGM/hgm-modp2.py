@@ -15,27 +15,17 @@ from sage.rings.integer_ring import ZZ
 from sage.rings.rational_field import QQ
 from pyrforest import remainder_forest
 
-# for pyflakes
-def mbound_dict_c(indices, start, end):
-    pass
-def moddiv_int(a, b, m):
-    pass
-def moddiv(a, b, m):
-    pass
-def recenter_mod(x, m):
-    pass
-def truncated_log_mod(x, e, m):
-    pass
-def truncated_exp(x, e):
-    pass
-def gammas_to_displacements(l, p):
-    pass
-def fast_hgm_sum(w, mat, ans, pe1, s):
-    pass
-load("hgm_misc.pyx")
-#load(path.join(path.dirname(path.abspath(__file__)), "hgm_misc.pyx"))
+from .hgm_misc import (
+    mbound_dict_c,
+    moddiv_int,
+    moddiv,
+    recenter_mod,
+    truncated_log_mod,
+    truncated_exp,
+    gammas_to_displacements,
+    fast_hgm_sum)
 
-load("gamma_expansions.py")
+
 
 def interpolation_polys(e, x):
     r"""
