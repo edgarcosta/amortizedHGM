@@ -137,69 +137,10 @@ def finitediff(k, M, a=0):
 
 
 
-# some utils for trees
-def left_child(r):
-    return r % 2 == 0
 
 
-def right_child(r):
-    return r % 2 == 1
 
 
-def next_power_of_2(n):
-    """
-    Returns the smallest integer power of 2 that is at least n.
-
-    INPUT:
-
-    - ``n`` -- an integer
-
-    EXAMPLES::
-
-        sage: next_power_of_2(13)
-        16
-        sage: next_power_of_2(1)
-        1
-        sage: next_power_of_2(16)
-        16
-        sage: next_power_of_2(17)
-        32
-    """
-    if n <= 1:
-        return ZZ(1)
-    return ZZ(1) << (1 + (ZZ(n) - 1).exact_log(2))
-
-
-def base_shift(n):
-    """
-    INPUT:
-
-    - ``n`` -- the length of a list ``base``
-
-    OUTPUT:
-
-    The index i so that when base is included as the base of a binary tree,
-    the bottom layer is base[:i] and the nodes on the second layer are base[i:]
-
-    EXAMPLES:
-
-    The numbers 1..7 are arranged along the bottom of the tree as 1..6
-    at the bottom layer and then the 7 at the layer above::
-
-        sage: base_shift(7)
-        6
-
-    If given a power of 2, all entries are on the bottom layer::
-
-        sage: base_shift(32)
-        32
-
-    If one more than a power of 2, then only two entries on the bottom layer::
-
-        sage: base_shift(17)
-        2
-    """
-    return 2 * n - next_power_of_2(n)
 
 
 def print_bottom_tree(tree, levels=2, spaces=4, print_shift=0):
@@ -263,72 +204,6 @@ def product_layer(layer):
         for (j, k) in zip(range(0, len(layer), 2), range(1, len(layer), 2))
     ]
 
-
-def build_tree(base):
-    """
-    INPUT:
-
-    - ``base`` -- a list of numbers (only requirement is that they can be multiplied)
-
-    OUTPUT:
-
-    A list of twice the length representing the binary tree with the given nodes at the base
-
-    EXAMPLES::
-
-        sage: tree = build_tree(list(range(1,14)))
-        sage: tree
-        [None,
-         6227020800,
-         40320,
-         154440,
-         24,
-         1680,
-         990,
-         156,
-         2,
-         12,
-         30,
-         56,
-         90,
-         11,
-         12,
-         13,
-         1,
-         2,
-         3,
-         4,
-         5,
-         6,
-         7,
-         8,
-         9,
-         10]
-        sage: print_bottom_tree(tree, levels=5)
-                                      6227020800
-                      40320                           154440
-              24              1680            990             156
-          2       12      30      56      90      11      12      13
-        1   2   3   4   5   6   7   8   9   10
-
-    This function can also be used to compute trees with other bases::
-
-        sage: tree = build_tree([p^3 for p in prime_range(20)])
-        sage: print_bottom_tree(tree, levels=4, spaces=10)
-                                           912585499096480209000
-                       9261000                                 98540708249269
-             216                 42875               2924207             33698267
-        8         27        125       343       1331      2197      4913      6859
-    """
-    # We want the nodes to be in order when read left-to-right, so we need to cycle
-    cut = base_shift(len(base))
-    half_layer = product_layer(base[:cut])
-    result = half_layer + base[cut:] + base[:cut]
-    current = half_layer + base[cut:]  # now current has length a power of 2
-    while len(current) > 1:
-        current = product_layer(current)
-        result = current + result
-    return [None] + result
 
 def padic_gauss_sum(a, p, f, prec=20, factored=False, algorithm='pari', parent=None):
     # Copied from Sage
