@@ -1,8 +1,8 @@
-__all__ = ["AmortizingHypergeometricData", "AmortizingHypergeometricDataV1", "AccRemForest"]
+__all__ = ["AmortizingHypergeometricData", "AmortizingHypergeometricDatamodp", "AccRemForest"]
 from .accremforest import AccRemForest
 from .hgm_modpe import AmortizingHypergeometricData
-from .hgm import AmortizingHypergeometricData as AmortizingHypergeometricDataV1
+from .hgm import AmortizingHypergeometricData as AmortizingHypergeometricDatamodp
 
 assert AccRemForest
 assert AmortizingHypergeometricData
-assert AmortizingHypergeometricDataV1
+assert AmortizingHypergeometricDatamodp
