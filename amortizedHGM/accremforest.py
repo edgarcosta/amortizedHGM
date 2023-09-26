@@ -1,6 +1,7 @@
 
 from sage.arith.misc import previous_prime
 from sage.misc.lazy_attribute import lazy_attribute
+from sage.misc.cachefunc import cached_method
 from sage.rings.fast_arith import prime_range
 from sage.rings.integer_ring import ZZ
 

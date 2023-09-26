@@ -26,7 +26,7 @@ from sage.rings.rational_field import QQ
 
 from pyrforest import remainder_forest
 
-from .padic_gamma import (
+from .gamma_expansions import (
     pAdicLogGammaCache,
 )
 from .hgm_misc import (
