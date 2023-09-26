@@ -10,7 +10,6 @@ from sage.matrix.special import identity_matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.misc_c import prod
-from sage.misc.persist import load
 from sage.modular.hypergeometric_motive import enumerate_hypergeometric_data, HypergeometricData
 from sage.modules.free_module_element import vector
 from sage.rings.fast_arith import prime_range
@@ -19,14 +18,8 @@ from sage.rings.integer_ring import ZZ
 from sage.rings.rational_field import QQ
 
 
-# for pyflakes
-def mbound_dict_c(indices, start, end):
-    pass
-load(path.join(path.dirname(path.abspath(__file__)), "hgm_misc.pyx"))
-# for pyflakes
-def remainder_forest(M, m, k, kbase=0, indices=None, V=None, ans=None, kappa=None):
-    pass
-load(path.join(path.dirname(path.abspath(__file__)), "average_poly.pyx"))
+from .hgm_misc import mbound_dict_c
+from pyrforest import remainder_forest
 
 def finitediff(k, M, a=0):
     """
@@ -682,7 +675,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             total += term
         return total
 
-    def amortized_padic_H_values_interval(self, ans, t, start, end, pclass, fixbreak, testp=None, use_c=False):
+    def amortized_padic_H_values_interval(self, ans, t, start, end, pclass, fixbreak, testp=None, use_c=True):
         r"""
         Return a dictionary
             p -> M[p]
@@ -782,7 +775,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
 
 
-    def amortized_padic_H_values(self, t, testp=None, verbose=False, use_c=False):
+    def amortized_padic_H_values(self, t, testp=None, verbose=False, use_c=True):
         """
         INPUT:
 
@@ -1235,7 +1228,7 @@ def test_padic_H_values(d, weight=1, N=ZZ(100), ts=[ZZ(3)/17, ZZ(91)/55, ZZ(1)/1
             continue
         H.test_padic_H_values(ts, testp=previous_prime(N))
 
-def compare(log2N, t, use_c=False, vssage=True, vsmagma=True,**kwds):
+def compare(log2N, t, use_c=True, vssage=True, vsmagma=True,**kwds):
     r"""
         e.g: compare(15, 1337, vssage=False, cyclotomic=([4,4,2,2], [3,3,3]))
     """
