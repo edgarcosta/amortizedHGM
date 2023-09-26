@@ -7,6 +7,8 @@ Sage code supporting
 Available at [arXiv:2005.13640](https://arxiv.org/abs/2005.13640)
  and appeared in the proceedings of the 2020 Algorithmic Number Theory Symposium
 
+Note: the previous version of the code was not a pip package, and can be found here:
+
 # Install
 
 ```
