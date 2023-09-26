@@ -40,7 +40,7 @@ hgm_misc = Extension(
 
 setup(
     name="amortizedHGM",
-    author="Edgar Costa",
+    author="Edgar Costa, Kiran Kedlaya and David Roe",
     author_email="edgarc@mit.edu",
     url="https://github.com/edgarcosta/amortizedHGM",
     license="GNU General Public License, version 3",
