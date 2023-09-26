@@ -1,29 +1,45 @@
 import array
-from os import path
+
 from sage.arith.functions import lcm
+from sage.arith.misc import GCD as gcd
+from sage.arith.misc import power_mod
 from sage.arith.misc import previous_prime
+from sage.functions.log import exp
+from sage.functions.other import (
+    binomial,
+    ceil,
+    factorial,
+    frac,
+)
 from sage.interfaces.magma import magma
 from sage.matrix.constructor import matrix
 from sage.matrix.special import identity_matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.misc_c import prod
-from sage.misc.persist import load
 from sage.modular.hypergeometric_motive import HypergeometricData
-from sage.rings.fast_arith import prime_range
+from sage.rings.finite_rings.integer_mod_ring import IntegerModRing
 from sage.rings.integer_ring import ZZ
+from sage.rings.padics.factory import Qp
+from sage.rings.power_series_ring import PowerSeriesRing
 from sage.rings.rational_field import QQ
+
 from pyrforest import remainder_forest
 
+from .padic_gamma import (
+    pAdicLogGammaCache,
+)
 from .hgm_misc import (
-    mbound_dict_c,
-    moddiv_int,
-    moddiv,
-    recenter_mod,
-    truncated_log_mod,
-    truncated_exp,
+    fast_hgm_sum,
     gammas_to_displacements,
-    fast_hgm_sum)
+    mbound_dict_c,
+    moddiv,
+    moddiv_int,
+    prime_range_by_residues,
+    recenter_mod,
+    truncated_exp,
+    truncated_log_mod,
+)
 
 
 
@@ -390,7 +406,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             d = start.denominator()
             for pclass in range(d):
                 if d.gcd(pclass) == 1:
-                    r = start.numerator()*(pclass-1) % d
+                    # r = start.numerator()*(pclass-1) % d
                     flgl = self._numden_factors(start, pclass)
                     for i in flgl:
                         dens.add(i.denominator())
@@ -472,7 +488,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         """
         e = self.e
         gammas = self.gammas_cache
-        n = self.degree()
+        # n = self.degree()
         R1 = ZZ['k1'] # k1 stands for k-1
         numden_factors = self._numden_factors(start, pclass)
         if index == 0:
