@@ -181,7 +181,13 @@ class pAdicLogGammaCache(UniqueRepresentation):
             True
         """
         try:
-            return self.cache[abp]
+            if abp in self.cache:
+                tmp = self.cache[abp]
+                return (tmp[0]*tmp[1], 1, tmp[2])
+            # Use the Legendre relation if possible.
+            a, b, p = abp
+            tmp = self.cache[b-a, b, p]
+            return (tmp[0], -1, tmp[2])
         except KeyError:
             a, b, p = abp
             if p <= self.e:
@@ -190,7 +196,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
                 N = max(p+1, 2*self.N)
                 self.increase_N(N)
             self._set_expansion_at_offset(b)
-            return self.cache[abp]
+            return self.expansion(abp)
 
     def _expansion0_prep(self):
         """
@@ -317,8 +323,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         if e == 1:
             if d == 1:
                 for p in prime_range(3, n):
-                    self.cache[0, 1, p] = (one, 1, None)
-                    self.cache[1, 1, p] = (minusone, 1, None)
+                    self.cache[0, 1, p] = (minusone, -1, None)
             else:
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
@@ -327,17 +332,14 @@ class pAdicLogGammaCache(UniqueRepresentation):
                             if p<=d and not d%p:
                                 continue
                             sgn, i = divmod(-b*p, d) # computes both quotient and remainder
-                            self.cache[i, d, p] = (-f if sgn%2 else f, 1, None)
-                            self.cache[d-i, d, p] = (f, -1, None)
+                            self.cache[i, d, p] = (f, -1 if sgn%2 else 1, None)
         else:
             zero_exp = self._expansion_at_0
             R = ZZ['x']
             x = R.gen()
             if d == 1:
                 for p, s in zero_exp.items():
-                    s = eval_poly_as_gen(s, x)
-                    self.cache[0, 1, p] = (one, 1, s)
-                    self.cache[1, 1, p] = (minusone, 1, s)
+                    self.cache[0, 1, p] = (minusone, -1, s)
             else:
                 Z1 = ZZ(1)
                 for b in srange(1, d//2+1):
@@ -347,8 +349,8 @@ class pAdicLogGammaCache(UniqueRepresentation):
                             if p<=d and not d%p:
                                 continue
 
-                            # Combine the expansion at 0 with the contribution from harmonic sums,
-                            # then recenter the log expansion.
+                            # Combine the expansion at 0 with the contribution from 
+                            # harmonic sums, then recenter the log expansion.
                             l = s[::]
                             gamma_translate(l, p, harmonics, e, b, d, normalized)
 
@@ -357,7 +359,5 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
                             # Return the computed expansion.
                             sgn, i = divmod(-b*p, d) # computes both quotient and remainder
-                            self.cache[i, d, p] = (-c0 if sgn%2 else c0, 1, eval_poly_as_gen(l, x))
+                            self.cache[i, d, p] = (c0, -1 if sgn%2 else 1, l)
 
-                            # Exploit the Legendre relation for Gamma_p to return another expansion for free.
-                            self.cache[d-i, d, p] = (c0, -1, -eval_poly_as_gen(l, -x))
