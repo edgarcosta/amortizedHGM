@@ -269,9 +269,9 @@ class pAdicLogGammaCache(UniqueRepresentation):
         e = self.e
         pe = p**e
         logfac = truncated_log_mod(-harmonics[1][p][0,1], e, pe) # = log -(p-1)!
-        tmp = vector([logfac] + [moddiv_int(-(-p)**j*harmonics[j][p][0,0], j*harmonics[j][p][0,1], pe) for j in range(1,e-1)])
+        tmp = matrix(ZZ, 1, e-1, [logfac] + [moddiv_int(-(-p)**j*harmonics[j][p][0,0], j*harmonics[j][p][0,1], pe) for j in range(1,e-1)])
         tmp *= mat
-        return [moddiv_int(tmp[i], den, pe).divide_knowing_divisible_by(p**(i+1)) for i in range(e-2,-1,-1)] + [0]
+        return [moddiv_int(tmp[0,i], den, pe).divide_knowing_divisible_by(p**(i+1)) for i in range(e-2,-1,-1)] + [0]
 
     @lazy_attribute
     def _expansion_at_0(self):
