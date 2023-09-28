@@ -41,8 +41,6 @@ from .hgm_misc import (
     truncated_log_mod,
 )
 
-
-
 def interpolation_polys(e, x):
     r"""
     Return the Lagrange interpolation polynomials in `x` for `e` evaluation points, multiplied by (e-1)!.
@@ -455,7 +453,6 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: H = AmortizingHypergeometricData(cyclotomic=([5,4], [7]))
             sage: H.precompute_gammas(100)
             sage: H.gammas_cache.expansion((9, 28, 89))
-[9, 28, 89]
             (1928, -1, 1424*x - 1602)
         """
         e = self.e
@@ -554,6 +551,23 @@ class AmortizingHypergeometricData(HypergeometricData):
     def amortized_padic_H_values_ferry(self, t, start, pclass):
         r"""
         Compute the matrix T_i(p) mod p. This is only used when e=1.
+
+        INPUT:
+
+        - ``t`` -- a rational number, the parameter of the hypergeometric motive
+        - ``start`` -- the left endpoint of an interval, `a/b` (one of the alpha or betas)
+        - ``pclass`` -- an integer `c` between 0 and `b`, relatively prime to `b`
+
+        OUTPUT:
+
+        The matrix T_i(p) from (5.22) of [CKR20], rescaled to be integral.
+
+        EXAMPLES::
+
+            sage: H = AmortizingHypergeometricData(cyclotomic=([5,4], [7]))
+            sage: H.amortized_padic_H_values_ferry(1, 3/5, 4)
+            [  43776       0]
+            [ -43776 1529437]
         """
         y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
         if ps1:
@@ -567,13 +581,29 @@ class AmortizingHypergeometricData(HypergeometricData):
 
     def amortized_padic_H_values_step(self, vectors, t, N, start, pclass, multlifts, debug=False):
         r"""
-        Given a dict `vectors` indexed by primes `p`, update `vectors` via
-           vectors[p] += P'_{m_i}
+        Adds terms to the trace formula sum corresponding to break points, where
+        the functional equation used in the interior of the intervals does not apply.
+
+        INPUT:
+
+        - ``vectors`` -- a dictionary, indexed by primes `p`
+        - ``t`` -- a rational number, the parameter for the hypergeometric motive
+        - ``N`` -- the upper bound on primes
+        - ``start`` -- a rational number `a/b`, the left endpoint of an interval
+          (ie one of the alpha or beta)
+        - ``pclass`` -- an integer between 0 and `b`, relatively prime to `b`,
+          specifying which primes should be updated
+        - ``multlifts`` -- A dictionary whose entry at `p` is a series in `k-1`
+          computing the multiplicative lift of `t^{k-1}` modulo `p^e` (only used for `e>1`)
+        - ``debug`` -- whether to perform debugging checks
+
+        OUTPUT:
+
+        None, but updates `vectors` via
+            vectors[p] += P'_{m_i},
         where m_i = floor(p*start), for primes `p` in the residue class
         `pclass` modulo the denominator of `start`.
 
-        If e>1, we assume that `multlifts` is a dict whose entry at `p` is a series in `k-1`
-        computing the multiplicative lift of t^(k-1) modulo p**e.
         """
         e = self.e
         y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
@@ -581,8 +611,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             # We still need to compute displacements if start==0, in order to set up zero_offsets.
             if start == 0:
                 displacements = self.displacements(N, start, pclass, 0)
-            return None
-        ei1 = e-ps1
+            return
+        ei1 = e - ps1
 
         d = start.denominator()
         indices = self._prime_range(t, N)[d][pclass]
@@ -606,7 +636,17 @@ class AmortizingHypergeometricData(HypergeometricData):
     def amortized_padic_H_values_matrix(self, t, N, ei, y, start, end, pclass,
                                         V=None, ans=None, debug=False):
         r"""
-        Compute the amortized matrix product for a range of the hypergeometric sum.
+        Uses an amortized matrix product to compute a piece of the trace formula
+        corresponding to an interval between two break points, simultaneously for
+        all primes in a given congruence class.
+
+        INPUT:
+
+        - ``t`` -- a rational number, the parameter of the hypergeometric motive.
+        - ``N`` -- the upper bound on primes
+        - ``ei`` -- the precision for this interval, which may be less than the
+          overall precision `e` for this hypergeometric data
+        - ``y`` -- a sign (0, 1 or -1), 
 
         If V is specified, each product is premultiplied by V.
 
