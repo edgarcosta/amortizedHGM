@@ -790,7 +790,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         return dict(ans)
 
     def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):
-        # TODO: improve this
+        # TODO: improve this (Edgar)
         r"""
         This is experimental!
 
