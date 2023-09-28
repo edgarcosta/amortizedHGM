@@ -167,6 +167,7 @@ cpdef gammas_to_displacements(l, Integer p):
         gammasum = [moddiv(tmp2[e-1-i][0], tmp2[e-1-i][1], p**(i+1)) for i in range(e)]
 
     for (inum,iden),j in flgl.items(): # i = inum/iden
+        # if e=1, then tmp1=1 and is unused
         tmp0, j0, tmp1 = gammas.expansion((inum, iden, p))
         j1 = j if j0 == 1 else -j
         if j1 > 0:
