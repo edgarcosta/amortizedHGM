@@ -6,7 +6,7 @@ Sage code supporting
  - [ tba ] **Hypergeometric L-functions in average polynomial time, II** by Edgar Costa, Kiran Kedlaya and David Roe
 
 
-Note: the previous version of the code was not a pip package, and can be found [here](https://github.com/edgarcosta/amortizedHGM/tree/arxiv/2005.13640).
+The previous version of the code was not a pip package, and can be found [here](https://github.com/edgarcosta/amortizedHGM/tree/arxiv/2005.13640).
 
 # Install
 
