@@ -41,8 +41,6 @@ from .hgm_misc import (
     truncated_log_mod,
 )
 
-
-
 def interpolation_polys(e, x):
     r"""
     Return the Lagrange interpolation polynomials in `x` for `e` evaluation points, multiplied by (e-1)!.
@@ -96,10 +94,9 @@ class AmortizingHypergeometricData(HypergeometricData):
     * ``gamma_list`` -- a pair of lists of nonnegative integers, each
       integer n represents a polynomial x^n - 1
 
-    * ``gamma_cache`` -- a pAdicLogGammaCache object, which can be reused
-      across different hypergeometric data.
+    * ``e`` -- a positive integer; computations will be done modulo p^e.
 
-    In the last case, it is also allowed to send just one list of
+    For ``gamma_list``, it is also allowed to provide just one list of
     signed integers where signs indicate to which part the integer
     belongs to.
 
@@ -111,12 +108,12 @@ class AmortizingHypergeometricData(HypergeometricData):
 
     The precision needed to uniquely determine the traces is::
 
-        sage: e = 1 + H.weight() // 2; e
-        2
+        sage: (H.e, 1 + H.weight() // 2)
+        (2, 2)
 
     We can compute Frobenius traces at a given value of t for good p up to 1000::
 
-        sage: values = H.amortized_padic_H_values(t=1337, N=1000, e=e)
+        sage: values = H.amortized_padic_H_values(t=1337, N=1000)
         sage: values[997]
         -11067
 
@@ -172,7 +169,8 @@ class AmortizingHypergeometricData(HypergeometricData):
         self.gammas_cache = pAdicLogGammaCache(e)
         self.zero_offsets = {}
 
-    def truncated_starts_ends(self, e=None):
+    @cached_method
+    def truncated_starts_ends(self):
         r"""
         List starts and ends of intervals, omitting those at the end which do not contribute
         to the trace mod p**e.
@@ -191,19 +189,20 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         We need all intervals at precision 2::
 
-            sage: H.truncated_starts_ends(2)
+            sage: H.truncated_starts_ends()
             [(0, 1/5), (1/5, 2/5), (2/5, 1/2), (1/2, 3/5), (3/5, 4/5), (4/5, 1)]
 
         But the last interval is irrelevant at precision 1::
 
-            sage: H.truncated_starts_ends(1)
+            sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]), e=1)
+            sage: H.truncated_starts_ends()
             [(0, 1/5), (1/5, 2/5), (2/5, 1/2), (1/2, 3/5), (3/5, 4/5)]
             sage: H.break_mults[4/5]
             (-1, 1)
             sage: H.break_mults_p1[4/5]
+            (-1, 1)
         """
-        if e is None:
-            e = self.e
+        e = self.e
         tmp = list(zip(self.starts, self.ends))
         while tmp:
             start, end = tmp[-1]
@@ -331,7 +330,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         INPUT:
 
         - ``start`` -- a break point: a rational number a/b between 0 and 1 with appropriate denominator
-        - ``pclass`` -- an integer between 0 and b-1 that is relatively prime to b-1
+        - ``pclass`` -- an integer between 0 and `b-1` that is relatively prime to `b`
 
         OUTPUT:
 
@@ -377,14 +376,9 @@ class AmortizingHypergeometricData(HypergeometricData):
         return flgl
 
     @cached_method
-    def gamma_denoms(self, e=None):
+    def gamma_denoms(self):
         r"""
         Return the denominators of pairwise differences between elements of alpha+beta.
-
-        INPUT:
-
-        - ``e`` -- a precision.  This only plays a role occasionally, when the last (few) intervals
-          might be omitted, possibly changing the set of denominators.
 
         OUTPUT:
 
@@ -396,11 +390,10 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: H = AmortizingHypergeometricData(cyclotomic=([5,4], [7]))
             sage: H.alpha_beta()
             ([1/5, 1/4, 2/5, 3/5, 3/4, 4/5], [1/7, 2/7, 3/7, 4/7, 5/7, 6/7])
-            sage: H.gamma_denoms(2)
+            sage: H.gamma_denoms()
             {1, 2, 4, 5, 7, 20, 28, 35}
         """
-        if e is None:
-            e = self.e
+        e = self.e
         dens = set([1])
         for (start, _) in self.truncated_starts_ends(e):
             d = start.denominator()
@@ -412,7 +405,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                         dens.add(i.denominator())
         return dens
 
-    def verify_summand(self, p, t, m, e=None):
+    def verify_summand(self, p, t, m, ei):
         r"""
         Compute a summand of the hypergeometric trace formula for debugging.
 
@@ -421,11 +414,11 @@ class AmortizingHypergeometricData(HypergeometricData):
         - ``p`` -- a prime that is not tame or wild
         - ``t`` -- a rational number
         - ``m`` -- an integer between 0 and p-2
-        - ``e`` -- a positive integer, the precision
+        - ``ei`` -- a positive integer, the precision
 
         OUTPUT:
 
-        The summand corresponding to m in the formula for ``H_p(alpha, beta | t) mod p^e``.
+        The summand corresponding to m in the formula for ``H_p(alpha, beta | t) mod p^ei``.
 
         EXAMPLES::
 
@@ -433,11 +426,9 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: H.verify_summand(97, 52/5, 58, 2)
             2968
         """
-        if e is None:
-            e = self.e
         F = Qp(p)
-        R = IntegerModRing(p**e)
-        tmult = power_mod(t, p**(e-1), p**e)
+        R = IntegerModRing(p**ei)
+        tmult = power_mod(t, p**(ei-1), p**ei)
         return (R(tmult)**m *
             prod(R(F(frac(i+m/(1-p))).gamma()) for i in self._alpha) /
             prod(R(F(frac(i)).gamma()) for i in self._alpha) /
@@ -448,36 +439,28 @@ class AmortizingHypergeometricData(HypergeometricData):
         r"""
         Precompute series expansion of p-adic Gamma needed for hypergeometric traces.
 
-        The result is cached in self.gammas_cache.
+        The result is cached in self.gammas_cache.  Note that calling this function
+        is not required before computing displacements, but it is included in order
+        to separate the time used for precomputation from the time used for later steps.
 
         INPUT:
 
         - ``N`` -- a positive integer, the upper bound on the primes
-        - ``e`` -- a positive integer, the p-adic precision
         - ``chained`` -- a boolean, only used to disable the computation in the case that e=1 and chained is true (when an older algorithm is used)
-
-        OUTPUT:
-
-        A dictionary, with keys (a, b, p), and values (c, i, f) so that
-        the power series expansion of Gamma_p(x) around a/b to precision e is
-        c^i exp(f), where i is 1 or -1 and c is an integer.
 
         EXAMPLES::
 
             sage: H = AmortizingHypergeometricData(cyclotomic=([5,4], [7]))
-            sage: H.gammas(100, 2)[9, 28, 89]
+            sage: H.precompute_gammas(100)
+            sage: H.gammas_cache.expansion((9, 28, 89))
             (1928, -1, 1424*x - 1602)
         """
         e = self.e
         if e == 1 and chained:
             return None
         self.gammas_cache.increase_N(N)
-        dens = self.gamma_denoms()
-        p = previous_prime(N)
-        for d in dens:
-            for b in range(d//2+1):
-                if gcd(b, d) == 1:
-                    _ = self.gammas_cache.expansion((b, d, p))
+        for b in self.gamma_denoms():
+            self.gammas_cache._set_expansion_at_offset(b)
 
     @cached_method
     def displacements(self, N, start, pclass, index):
@@ -485,6 +468,33 @@ class AmortizingHypergeometricData(HypergeometricData):
         Precompute p-adic displacements using Gamma values.
 
         These represent the value of P_{m_i} and P_{m_i+k} for k>0, assuming z=1.
+
+        INPUT:
+
+        - ``N`` -- a positive integer, the upper bound on the primes computed
+        - ``start`` -- a gamma value `a/b` (one of the alpha or betas), representing the start of the interval
+        - ``pclass`` -- an integer between 0 and b-1 that is relatively prime to b
+        - ``index`` -- either 0 or 1, whether we are computing P_{m_i} or P_{m_i+1}
+
+        OUTPUT:
+
+        If this interval contributes nothing (because the base valuation is larger than e),
+        return ``None``.  Otherwise, a dictionary indexed by primes congruent to ``pclass``
+        modulo the denominator of ``start``, with value either `P_{m_i}` or `P_{m_i+1}`.
+
+        EXAMPLES::
+
+            sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]))
+            sage: H.displacements(50, 1/2, 1, 1)
+            {23: 23*k1 + 206,
+             29: 638*k1 + 316,
+             31: 341*k1 + 615,
+             37: 1258*k1 + 1288,
+             41: 902*k1 + 1193,
+             43: 1548*k1 + 1056,
+             47: 329*k1 + 722}
+            sage: H.displacements(50, 3/5, 2, 0)
+            {37: 624, 47: 106}
         """
         e = self.e
         gammas = self.gammas_cache
@@ -493,9 +503,10 @@ class AmortizingHypergeometricData(HypergeometricData):
         numden_factors = self._numden_factors(start, pclass)
         if index == 0:
             # Contribute P_{m_i} assuming z == 1.
-            _, ps = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
             if start == 0: # Need initial value modulo p**e for normalization.
                 ps = 0
+            else:
+                _, ps = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
             inter_polys = []
             flgl1 = {i-j[1]: j[0] for i, j in numden_factors.items()}
         else:
@@ -533,13 +544,30 @@ class AmortizingHypergeometricData(HypergeometricData):
         ans = {p: gammas_to_displacements(l, p)
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==index==0, we need to extract a normalization factor.
-        if start==0 and index==0:
+        if start == index == 0:
             self.zero_offsets[N] = ans
         return ans
 
     def amortized_padic_H_values_ferry(self, t, start, pclass):
         r"""
         Compute the matrix T_i(p) mod p. This is only used when e=1.
+
+        INPUT:
+
+        - ``t`` -- a rational number, the parameter of the hypergeometric motive
+        - ``start`` -- the left endpoint of an interval, `a/b` (one of the alpha or betas)
+        - ``pclass`` -- an integer `c` between 0 and `b`, relatively prime to `b`
+
+        OUTPUT:
+
+        The matrix T_i(p) from (5.22) of [CKR20], rescaled to be integral.
+
+        EXAMPLES::
+
+            sage: H = AmortizingHypergeometricData(cyclotomic=([5,4], [7]))
+            sage: H.amortized_padic_H_values_ferry(1, 3/5, 4)
+            [  43776       0]
+            [ -43776 1529437]
         """
         y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
         if ps1:
@@ -553,13 +581,29 @@ class AmortizingHypergeometricData(HypergeometricData):
 
     def amortized_padic_H_values_step(self, vectors, t, N, start, pclass, multlifts, debug=False):
         r"""
-        Given a dict `vectors` indexed by primes `p`, update `vectors` via
-           vectors[p] += P'_{m_i}
+        Adds terms to the trace formula sum corresponding to break points, where
+        the functional equation used in the interior of the intervals does not apply.
+
+        INPUT:
+
+        - ``vectors`` -- a dictionary, indexed by primes `p`
+        - ``t`` -- a rational number, the parameter for the hypergeometric motive
+        - ``N`` -- the upper bound on primes
+        - ``start`` -- a rational number `a/b`, the left endpoint of an interval
+          (ie one of the alpha or beta)
+        - ``pclass`` -- an integer between 0 and `b`, relatively prime to `b`,
+          specifying which primes should be updated
+        - ``multlifts`` -- A dictionary whose entry at `p` is a series in `k-1`
+          computing the multiplicative lift of `t^{k-1}` modulo `p^e` (only used for `e>1`)
+        - ``debug`` -- whether to perform debugging checks
+
+        OUTPUT:
+
+        None, but updates `vectors` via
+            vectors[p] += P'_{m_i},
         where m_i = floor(p*start), for primes `p` in the residue class
         `pclass` modulo the denominator of `start`.
 
-        If e>1, we assume that `multlifts` is a dict whose entry at `p` is a series in `k-1`
-        computing the multiplicative lift of t^(k-1) modulo p**e.
         """
         e = self.e
         y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
@@ -567,8 +611,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             # We still need to compute displacements if start==0, in order to set up zero_offsets.
             if start == 0:
                 displacements = self.displacements(N, start, pclass, 0)
-            return None
-        ei1 = e-ps1
+            return
+        ei1 = e - ps1
 
         d = start.denominator()
         indices = self._prime_range(t, N)[d][pclass]
@@ -592,7 +636,17 @@ class AmortizingHypergeometricData(HypergeometricData):
     def amortized_padic_H_values_matrix(self, t, N, ei, y, start, end, pclass,
                                         V=None, ans=None, debug=False):
         r"""
-        Compute the amortized matrix product for a range of the hypergeometric sum.
+        Uses an amortized matrix product to compute a piece of the trace formula
+        corresponding to an interval between two break points, simultaneously for
+        all primes in a given congruence class.
+
+        INPUT:
+
+        - ``t`` -- a rational number, the parameter of the hypergeometric motive.
+        - ``N`` -- the upper bound on primes
+        - ``ei`` -- the precision for this interval, which may be less than the
+          overall precision `e` for this hypergeometric data
+        - ``y`` -- a sign (0, 1 or -1), 
 
         If V is specified, each product is premultiplied by V.
 
