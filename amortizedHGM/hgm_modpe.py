@@ -540,7 +540,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 flgl[(i-1).as_integer_ratio()] = j
             else:
                 flgl[i.as_integer_ratio()] = j
-        tmp2 = tuple(tmp2[e-1-i].as_integer_ratio() for i in range(e))
+        tmp2 = tuple(tmp2[i].as_integer_ratio() for i in range(e))
 
         R = ZZ['x']
         l = (gammas, flgl, tmp.numer(), tmp.denom(), tmp2, index, R.gen(), r, d, ei, factorial(ZZ(ei-1)), inter_polys)

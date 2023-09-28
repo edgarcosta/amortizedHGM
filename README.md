@@ -24,8 +24,8 @@ sage -pip install --upgrade  git+https://github.com/edgarcosta/amortizedHGM.git@
 
 # Example
 ```
-sage: from amortizedHGM import AmortizingHypergeometricData
-....: H = AmortizingHypergeometricData(10**2,   cyclotomic=([4,2,2], [3,3]))
+sage: from amortizedHGM import AmortizingHypergeometricDatamodp # the version of the first paper
+....: H = importAmortizingHypergeometricDatamodp(10**2,   cyclotomic=([4,2,2], [3,3]))
 ....: H.amortized_padic_H_values(1/5) # this uses the rforest library
 {11: 9,
  13: 9,
