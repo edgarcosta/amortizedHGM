@@ -162,48 +162,77 @@ cpdef int gamma_translate(l, Integer p, harmonics, int e,
     for i in range(e-1 if normalized else e):
         l[i] = l[i]%pe[i]
 
-cpdef gammas_to_displacements(l, Integer p):
-    # Computes an inner loop in the computation of P_{m_i} and P_{m_i+1}.
+cpdef gamma_expansion_product(l, Integer p):
+    # Compute a product of expansions of Gamma_p.
+    # Used in an inner loop in the computation of P_{m_i} and P_{m_i+1}.
 
-    cdef int index, i, j, j0, j1, e, efac
-    cdef Integer r, d, pe, p1, arg0, gammaprodnum, gammaprodden, tmp0, inum, iden
+    cdef int i, j, j0, j1, e
+    cdef Integer pe, p1, num, den, tmp0, inum, iden
 
     # Import local variables from the calling scope. These do not depend on p.
-    gammas, flgl, gammaprodnum, gammaprodden, tmp2, index, r, d, e, efac, inter_polys = l
-    # Note: gammaprodnum/gammaprodden records the effect of integer shifts
-    # on the constant term of the Gamma series.
+    gammas, flgl, e = l
 
-    if e > 1:
-        # Set up accumulator for the logarithmic series expansion,
-        # seeding it with the effect of integer shifts.
-        gammasum = [moddiv_int(tmp2[e-1-i][0], tmp2[e-1-i][1], p**(i+1)) for i in range(e)]
-
+    num = Integer(1)
+    den = Integer(1)
+    gammasum = [0 for i in range(e)]
+    
     for (inum,iden),j in flgl.items(): # i = inum/iden
         # if e=1, then tmp1=1 and is unused
         tmp0, j0, tmp1 = gammas.expansion((inum, iden, p))
         j1 = j if j0 == 1 else -j
         if j1 > 0:
-            gammaprodnum *= tmp0 if j1==1 else tmp0**j1
+            num *= tmp0 if j1==1 else tmp0**j1
         else:
-            gammaprodden *= tmp0 if j1==-1 else tmp0**-j1
+            den *= tmp0 if j1==-1 else tmp0**-j1
         if e > 1:
             for i in range(e):
                 # Beware that len(tmp1) can exceed e.
+#                 gammasum[e-1-i] += j1*tmp1[-1-i]*(-1 if j0==-1 and i%2 else 1)
                 gammasum[e-1-i] += j1*tmp1[-1-i]
-    if e == 1:
-        return moddiv_int(gammaprodnum, gammaprodden, p)
+    
+    return num, den, gammasum
 
-    arg0 = p*moddiv_int(-r, d if e==2 else d*(1-p), p if e==2 else p**(e-1))
-    if index == 0:
-        return moddiv_int(gammaprodnum*truncated_exp_int(eval_poly_as_gen(gammasum, arg0), e), gammaprodden*efac, p**e)
-    else: # index == 1 and e > 1
-        pe = p**e
-        p1 = (pe-p).divide_knowing_divisible_by(p-1) # reduces to 1/(1-p) mod pe
-        tmp1 = 0
-        for j in range(e):
-            arg0 += p1
-            tmp1 += truncated_exp_int(eval_poly_as_gen(gammasum, arg0), e)*inter_polys[j]
-        return moddiv(tmp1*gammaprodnum, gammaprodden*efac**2, pe)
+cpdef gammas_to_displacements(l, Integer p, t):
+    # Computes an inner loop in the computation of P_{m_i} and P_{m_i+1}.
+    # Assumes t is the output of gamma_expansion_product.
+
+    cdef int i, j, j0, j1, etmp, e1, e1fac, e, efac, index
+    cdef Integer r, d, pe, p1, arg0, gammaprodnum, gammaprodden, num, den, tmp0, inum, iden
+
+    num, den, gammasum0 = t
+    
+    # Import local variables from the calling scope. These do not depend on p.
+    tmp, tmp2, r, d, e1, e1fac, e, efac, inter_polys = l
+    
+    ans = []
+
+    for index in range(2):
+        # Adjust the computed product to account for integer shifts.
+        gammaprodnum = tmp[index][0]*num
+        gammaprodden = tmp[index][1]*den
+
+        etmp = (e1, e)[index]
+        if etmp <= 0:
+            ans.append(None)
+        elif etmp == 1:
+            ans.append(moddiv_int(gammaprodnum, gammaprodden, p))
+        else:
+            # Adjust the logarithmic series expansion to account for integer shifts.
+            # Beware that gammasum0 may be longer than e.
+            gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2[index][etmp-1-i][0], tmp2[index][etmp-1-i][1], p**(i+1)) for i in range(etmp)]
+
+            arg0 = p*moddiv_int(-r, d if etmp==2 else d*(1-p), p if etmp==2 else p**(etmp-1))
+            if index == 0:
+                ans.append(moddiv_int(gammaprodnum*truncated_exp_int(eval_poly_as_gen(gammasum, arg0), e1), gammaprodden*e1fac, p**e1))
+            else: # index == 1 and e > 1
+                pe = p**e
+                p1 = (pe-p).divide_knowing_divisible_by(p-1) # reduces to 1/(1-p) mod pe
+                tmp1 = 0
+                for j in range(e):
+                    arg0 += p1
+                    tmp1 += truncated_exp_int(eval_poly_as_gen(gammasum, arg0), e)*inter_polys[j]
+                ans.append(moddiv(tmp1*gammaprodnum, gammaprodden*efac**2, pe))
+    return ans
 
 cpdef Integer fast_hgm_sum(tuple w, array.array mat, ans, Integer pe1, int s):
     # Computes a sum in the innermost loop of the trace formula.

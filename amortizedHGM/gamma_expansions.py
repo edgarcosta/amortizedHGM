@@ -192,7 +192,8 @@ class pAdicLogGammaCache(UniqueRepresentation):
             if f is None:
                 return c, -1, f
             # substitute x -> -x (and multiply by -1)
-            return c, -1, [f[j] if j%2 else -f[j] for j in range(len(f))]
+            e = len(f)
+            return c, -1, [f[j] if (e-j)%2 else -f[j] for j in range(e)]
         except KeyError:
             if p <= self.e:
                 raise ValueError(f"Cache does not support primes smaller than {self.e+1}")
