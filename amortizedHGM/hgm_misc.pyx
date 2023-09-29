@@ -43,6 +43,18 @@ cpdef prime_range_by_residues(a, b, dens, s):
                 prime_ranges[d][p % d].append(p)
     return prime_ranges
 
+cpdef multiplicative_lift(t, Integer p, int e, Integer efac, x):
+    r"""
+    Compute a polynomial whose value at x is ([t]/t)**x mod p**e, where [t] denotes the
+    p-adic multiplicative lift.
+
+    We assume that efac == factorial(e-1).
+    """
+    cdef Integer pe = p**e
+    cdef Integer tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
+    cdef Integer tmp2 = moddiv_int(truncated_log_mod(tmp, e, pe), 1-p, pe)
+    return moddiv(truncated_exp(tmp2*x, e), efac, pe)
+
 cpdef Integer moddiv_int(Integer a, Integer b, Integer m):
     r"""
     Compute a/b mod m. All of a, b, and m must be Sage integers.
@@ -129,24 +141,26 @@ cpdef int gamma_translate(l, Integer p, harmonics, int e,
     # Computes an inner loop in the computation of Gamma_p(x+c).
 
     cdef int i, j
-    cdef Integer tmp = Integer(1), pe = p**e
+    cdef Integer tmp = Integer(1)
+    
+    pe = [p**(i+1) for i in range(e)]
 
     # Combine the expansion at 0 with the contribution from harmonic sums.
     # Note that l starts out representing the *reversed* expansion at 0.
     for j in range(1, e):
-         tmp *= -1
-         h = harmonics[j][p] # A 1x2 matrix representing H_{j,gamma}
-         l[-1-j] += moddiv_int(-tmp*h[0,0], j*h[0,1], pe)
+         tmp = -tmp
+         h = harmonics[j][p] # A 1x2 matrix representing H_{j,gamma} mod p**(e-j)
+         l[-1-j] += moddiv_int(-tmp*h[0,0], j*h[0,1], pe[e-j-1])
 
     # Recenter the log expansion.
-    tmp = moddiv_int(-b*p, d, pe)
+    tmp = p*moddiv_int(-b, d, p**(e-1))
     for i in range(1, e):
         for j in range(i, 0, -1):
             l[j] += l[j-1]*tmp
     if normalized: # Eliminate the constant term.
         l[-1] = 0
     for i in range(e-1 if normalized else e):
-        l[i] = l[i]%p**(i+1)
+        l[i] = l[i]%pe[i]
 
 cpdef gammas_to_displacements(l, Integer p):
     # Computes an inner loop in the computation of P_{m_i} and P_{m_i+1}.
@@ -155,16 +169,14 @@ cpdef gammas_to_displacements(l, Integer p):
     cdef Integer r, d, pe, p1, arg0, gammaprodnum, gammaprodden, tmp0, inum, iden
 
     # Import local variables from the calling scope. These do not depend on p.
-    gammas, flgl, gammaprodnum, gammaprodden, tmp2, index, x, r, d, e, efac, inter_polys = l
+    gammas, flgl, gammaprodnum, gammaprodden, tmp2, index, r, d, e, efac, inter_polys = l
     # Note: gammaprodnum/gammaprodden records the effect of integer shifts
     # on the constant term of the Gamma series.
 
-    if e == 1:
-        pe = p
-    else:
+    if e > 1:
         # Set up accumulator for the logarithmic series expansion,
         # seeding it with the effect of integer shifts.
-        gammasum = [moddiv(tmp2[e-1-i][0], tmp2[e-1-i][1], p**(i+1)) for i in range(e)]
+        gammasum = [moddiv_int(tmp2[e-1-i][0], tmp2[e-1-i][1], p**(i+1)) for i in range(e)]
 
     for (inum,iden),j in flgl.items(): # i = inum/iden
         # if e=1, then tmp1=1 and is unused
@@ -176,15 +188,16 @@ cpdef gammas_to_displacements(l, Integer p):
             gammaprodden *= tmp0 if j1==-1 else tmp0**-j1
         if e > 1:
             for i in range(e):
+                # Beware that len(tmp1) can exceed e.
                 gammasum[e-1-i] += j1*tmp1[-1-i]
     if e == 1:
         return moddiv_int(gammaprodnum, gammaprodden, p)
 
-    pe = p**e
-    arg0 = moddiv_int(-p*r, d*(1-p), pe)
+    arg0 = p*moddiv_int(-r, d if e==2 else d*(1-p), p if e==2 else p**(e-1))
     if index == 0:
-        return moddiv_int(gammaprodnum*truncated_exp_int(eval_poly_as_gen(gammasum, arg0), e), gammaprodden*efac, pe)
+        return moddiv_int(gammaprodnum*truncated_exp_int(eval_poly_as_gen(gammasum, arg0), e), gammaprodden*efac, p**e)
     else: # index == 1 and e > 1
+        pe = p**e
         p1 = (pe-p).divide_knowing_divisible_by(p-1) # reduces to 1/(1-p) mod pe
         tmp1 = 0
         for j in range(e):

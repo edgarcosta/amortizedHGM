@@ -35,6 +35,7 @@ from .hgm_misc import (
     mbound_dict_c,
     moddiv,
     moddiv_int,
+    multiplicative_lift,
     prime_range_by_residues,
     recenter_mod,
     truncated_exp,
@@ -539,8 +540,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 flgl[i.as_integer_ratio()] = j
         tmp2 = tuple(tmp2[i].as_integer_ratio() for i in range(e))
 
-        R = ZZ['x']
-        l = (gammas, flgl, tmp.numer(), tmp.denom(), tmp2, index, R.gen(), r, d, ei, factorial(ZZ(ei-1)), inter_polys)
+        l = (gammas, flgl, tmp.numer(), tmp.denom(), tmp2, index, r, d, ei, factorial(ZZ(ei-1)), inter_polys)
         ans = {p: gammas_to_displacements(l, p)
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==index==0, we need to extract a normalization factor.
@@ -800,14 +800,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             P = ZZ['k1']
             k1 = P.gen()
             den = factorial(ZZ(e-1))
-            multlifts = []
-            for p in self._prime_range(t, N)[1][0]:
-                pe = p**e
-                tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
-                tmp2 = moddiv_int(truncated_log_mod(tmp, e, pe), 1-p, pe)
-                w1 = moddiv(truncated_exp(tmp2*k1, e), den, pe)
-                multlifts.append((p, w1))
-            multlifts = dict(multlifts)
+            multlifts = {p: multiplicative_lift(t, p, e, den, k1) for p in self._prime_range(t, N)[1][0]}
 
         if debug:
             assert all(power_mod(t*multlifts[p](1),p**e-1,p**e) == 1 for p in self._prime_range(t, N)[1][0])
