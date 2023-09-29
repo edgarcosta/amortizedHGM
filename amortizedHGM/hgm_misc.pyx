@@ -176,7 +176,7 @@ cpdef gammas_to_displacements(l, Integer p):
     if e > 1:
         # Set up accumulator for the logarithmic series expansion,
         # seeding it with the effect of integer shifts.
-        gammasum = [moddiv(tmp2[e-1-i][0], tmp2[e-1-i][1], p**(i+1)) for i in range(e)]
+        gammasum = [moddiv_int(tmp2[e-1-i][0], tmp2[e-1-i][1], p**(i+1)) for i in range(e)]
 
     for (inum,iden),j in flgl.items(): # i = inum/iden
         # if e=1, then tmp1=1 and is unused
