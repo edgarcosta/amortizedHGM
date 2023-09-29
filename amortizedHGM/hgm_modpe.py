@@ -30,6 +30,7 @@ from .gamma_expansions import (
     pAdicLogGammaCache,
 )
 from .hgm_misc import (
+    gamma_expansion_product,
     fast_hgm_sum,
     gammas_to_displacements,
     mbound_dict_c,
@@ -498,50 +499,50 @@ class AmortizingHypergeometricData(HypergeometricData):
             {37: 624, 47: 106}
         """
         e = self.e
-        gammas = self.gammas_cache
-        # n = self.degree()
-        R1 = ZZ['k1'] # k1 stands for k-1
-        numden_factors = self._numden_factors(start, pclass)
         if index == 0:
-            # Contribute P_{m_i} assuming z == 1.
             if start == 0: # Need initial value modulo p**e for normalization.
                 ps = 0
             else:
                 _, ps = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
-            inter_polys = []
-            flgl1 = {i-j[1]: j[0] for i, j in numden_factors.items()}
         else:
-            # Contribute P_{m_i+1} assuming z == 1, multiplied by an associated series.
             _, ps = self.interval_mults[start]
-            inter_polys = interpolation_polys(e-ps, R1.gen())
-            flgl1 = {i+1: j[0] for i, j in numden_factors.items()}
         if ps >= e:
             return None
         ei = e-ps
-        d = start.denominator()
-        r = start.numerator()*(pclass-1) % d
 
-        # Precompute the effect of integer shifts away from [0,1].
+        # Precompute the effect of integer shifts away from (0,1].
         flgl = {}
         tmp = QQ(1)
         R1 = QQ['x1']
         x1 = R1.gen()
         tmp2 = R1(0)
-        for i,j in flgl1.items():
+        for i0, j0 in self._numden_factors(start, pclass).items():
+            if index == 0:
+                # Contribute P_{m_i} assuming z == 1.
+                i,j = i0-j0[1], j0[0]
+            else:
+                # Contribute P_{m_i+1} assuming z == 1, multiplied by an associated series.
+                i,j = i0+1, j0[0]
+            flgl[(i+1-i.ceil()).as_integer_ratio()] = j
             if i < 0:
                 tmp /= (-i)**j
                 tmp2 += j*sum((-x1/i)**k/k for k in range(1,e))
-                flgl[(i+1).as_integer_ratio()] = j
             elif i > 1:
                 tmp *= (1-i)**j
                 tmp2 -= j*sum((-x1/(i-1))**k/k for k in range(1,e))
-                flgl[(i-1).as_integer_ratio()] = j
-            else:
-                flgl[i.as_integer_ratio()] = j
+            elif i == 0:
+                tmp *= (-QQ(1))**j
         tmp2 = tuple(tmp2[i].as_integer_ratio() for i in range(e))
 
-        l = (gammas, flgl, tmp.numer(), tmp.denom(), tmp2, index, r, d, ei, factorial(ZZ(ei-1)), inter_polys)
-        ans = {p: gammas_to_displacements(l, p)
+        gammas = self.gammas_cache
+        l0 = (gammas, flgl, ei)
+        d = start.denominator()
+        r = start.numerator()*(pclass-1) % d
+        R1 = ZZ['k1'] # k1 stands for k-1
+        inter_polys = interpolation_polys(e-ps, R1.gen())
+        l = (tmp.numer(), tmp.denom(), tmp2, r, d, ei, factorial(ZZ(ei-1)), inter_polys)
+
+        ans = {p: gammas_to_displacements(l, index, p, gamma_expansion_product(l0, p))
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==index==0, we need to extract a normalization factor.
         if start == index == 0:

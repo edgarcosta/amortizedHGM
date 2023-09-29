@@ -162,37 +162,60 @@ cpdef int gamma_translate(l, Integer p, harmonics, int e,
     for i in range(e-1 if normalized else e):
         l[i] = l[i]%pe[i]
 
-cpdef gammas_to_displacements(l, Integer p):
-    # Computes an inner loop in the computation of P_{m_i} and P_{m_i+1}.
+cpdef gamma_expansion_product(l, Integer p):
+    # Compute a product of expansions of Gamma_p.
+    # Used in an inner loop in the computation of P_{m_i} and P_{m_i+1}.
 
-    cdef int index, i, j, j0, j1, e, efac
-    cdef Integer r, d, pe, p1, arg0, gammaprodnum, gammaprodden, tmp0, inum, iden
+    cdef int i, j, j0, j1, e
+    cdef Integer pe, p1, num, den, tmp0, inum, iden
 
     # Import local variables from the calling scope. These do not depend on p.
-    gammas, flgl, gammaprodnum, gammaprodden, tmp2, index, r, d, e, efac, inter_polys = l
-    # Note: gammaprodnum/gammaprodden records the effect of integer shifts
-    # on the constant term of the Gamma series.
+    gammas, flgl, e = l
 
-    if e > 1:
-        # Set up accumulator for the logarithmic series expansion,
-        # seeding it with the effect of integer shifts.
-        gammasum = [moddiv_int(tmp2[e-1-i][0], tmp2[e-1-i][1], p**(i+1)) for i in range(e)]
-
+    num = Integer(1)
+    den = Integer(1)
+    gammasum = [0 for i in range(e)]
+    
     for (inum,iden),j in flgl.items(): # i = inum/iden
         # if e=1, then tmp1=1 and is unused
         tmp0, j0, tmp1 = gammas.expansion((inum, iden, p))
         j1 = j if j0 == 1 else -j
         if j1 > 0:
-            gammaprodnum *= tmp0 if j1==1 else tmp0**j1
+            num *= tmp0 if j1==1 else tmp0**j1
         else:
-            gammaprodden *= tmp0 if j1==-1 else tmp0**-j1
+            den *= tmp0 if j1==-1 else tmp0**-j1
         if e > 1:
             for i in range(e):
                 # If j0==-1, substitute x -> -x.
                 # Beware that len(tmp1) can exceed e.
                 gammasum[e-1-i] += j1*tmp1[-1-i]*(-1 if j0==-1 and i%2 else 1)
+    
+    return num, den, gammasum
+
+cpdef gammas_to_displacements(l, int index, Integer p, t):
+    # Computes an inner loop in the computation of P_{m_i} and P_{m_i+1}.
+    # Assumes t is the output of gamma_expansion_product.
+
+    cdef int i, j, j0, j1, e, efac
+    cdef Integer r, d, pe, p1, arg0, gammaprodnum, gammaprodden, num, den, tmp0, inum, iden
+
+    # Import local variables from the calling scope. These do not depend on p.
+    gammaprodnum, gammaprodden, tmp2, r, d, e, efac, inter_polys = l
+    # Note: gammaprodnum/gammaprodden records the effect of integer shifts
+    # on the constant term of the Gamma series.
+
+    num, den, gammasum = t
+    
+    # Adjust the computed product to account for integer shifts.
+    gammaprodnum *= num
+    gammaprodden *= den
+
     if e == 1:
         return moddiv_int(gammaprodnum, gammaprodden, p)
+
+    # Adjust the logarithmic series expansion to account for integer shifts.
+    for i in range(e):
+        gammasum[i] += moddiv_int(tmp2[e-1-i][0], tmp2[e-1-i][1], p**(i+1))
 
     arg0 = p*moddiv_int(-r, d if e==2 else d*(1-p), p if e==2 else p**(e-1))
     if index == 0:
