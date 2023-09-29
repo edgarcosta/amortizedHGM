@@ -176,7 +176,7 @@ cpdef gammas_to_displacements(l, Integer p):
             gammaprodden *= tmp0 if j1==-1 else tmp0**-j1
         if e > 1:
             for i in range(e):
-                gammasum[e-1-i] += j1*tmp1[-1-i]*(-1 if j0==-1 and i%2 else 1)
+                gammasum[e-1-i] += j1*tmp1[-1-i]
     if e == 1:
         return moddiv_int(gammaprodnum, gammaprodden, p)
 
