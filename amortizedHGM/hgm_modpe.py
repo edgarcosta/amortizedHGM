@@ -465,7 +465,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             self.gammas_cache._set_expansion_at_offset(b)
 
     @cached_method
-    def displacements(self, N, start, pclass, index):
+    def displacements(self, N, start, pclass):
         r"""
         Precompute p-adic displacements using Gamma values.
 
@@ -476,13 +476,13 @@ class AmortizingHypergeometricData(HypergeometricData):
         - ``N`` -- a positive integer, the upper bound on the primes computed
         - ``start`` -- a gamma value `a/b` (one of the alpha or betas), representing the start of the interval
         - ``pclass`` -- an integer between 0 and b-1 that is relatively prime to b
-        - ``index`` -- either 0 or 1, whether we are computing P_{m_i} or P_{m_i+1}
 
         OUTPUT:
 
         If this interval contributes nothing (because the base valuation is larger than e),
         return ``None``.  Otherwise, a dictionary indexed by primes congruent to ``pclass``
-        modulo the denominator of ``start``, with value either `P_{m_i}` or `P_{m_i+1}`.
+        modulo the denominator of ``start``, with value a pair representing 
+        `P_{m_i}` and `P_{m_i+1}`.
 
         EXAMPLES::
 
@@ -499,54 +499,53 @@ class AmortizingHypergeometricData(HypergeometricData):
             {37: 624, 47: 106}
         """
         e = self.e
-        if index == 0:
-            if start == 0: # Need initial value modulo p**e for normalization.
-                ps = 0
-            else:
-                _, ps = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
+        if start == 0: # Need initial value modulo p**e for normalization.
+            ps1 = 0
         else:
-            _, ps = self.interval_mults[start]
-        if ps >= e:
+            _, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
+        _, ps = self.interval_mults[start]
+        if ps1 >= e and ps >= e:
             return None
-        ei = e-ps
 
         # Precompute the effect of integer shifts away from (0,1].
         flgl = {}
-        tmp = QQ(1)
+        tmp = [QQ(1), QQ(1)]
         R1 = QQ['x1']
         x1 = R1.gen()
-        tmp2 = R1(0)
+        tmp2 = [R1(0), R1(0)]
         for i0, j0 in self._numden_factors(start, pclass).items():
-            if index == 0:
-                # Contribute P_{m_i} assuming z == 1.
-                i,j = i0-j0[1], j0[0]
-            else:
-                # Contribute P_{m_i+1} assuming z == 1, multiplied by an associated series.
-                i,j = i0+1, j0[0]
+            i,j = i0[0], j0[0]
             flgl[(i+1-i.ceil()).as_integer_ratio()] = j
-            if i < 0:
-                tmp /= (-i)**j
-                tmp2 += j*sum((-x1/i)**k/k for k in range(1,e))
-            elif i > 1:
-                tmp *= (1-i)**j
-                tmp2 -= j*sum((-x1/(i-1))**k/k for k in range(1,e))
-            elif i == 0:
-                tmp *= (-QQ(1))**j
-        tmp2 = tuple(tmp2[i].as_integer_ratio() for i in range(e))
+            for index in range(2):
+                i = i0 + (1 if index else -j0[1])
+                if i < 0:
+                    tmp[index] /= (-i)**j
+                    tmp2[index] += j*sum((-x1/i)**k/k for k in range(1,e))
+                elif i > 1:
+                    tmp[index] *= (1-i)**j
+                    tmp2[index] -= j*sum((-x1/(i-1))**k/k for k in range(1,e))
+                elif i == 0:
+                    tmp[index] *= (-QQ(1))**j
+        tmp2 = [tuple(t[i].as_integer_ratio() for i in range(e)) for t in tmp2]
 
         gammas = self.gammas_cache
-        l0 = (gammas, flgl, ei)
+        l0 = (gammas, flgl, e-min(ps,ps1))
+
         d = start.denominator()
         r = start.numerator()*(pclass-1) % d
+        ei1 = e-ps1
+        ei = e-ps
         R1 = ZZ['k1'] # k1 stands for k-1
-        inter_polys = interpolation_polys(e-ps, R1.gen())
-        l = (tmp.numer(), tmp.denom(), tmp2, r, d, ei, factorial(ZZ(ei-1)), inter_polys)
+        inter_polys = interpolation_polys(ei, R1.gen())
+        l = (tuple(t.as_integer_ratio() for t in tmp), tmp2, r, d, 
+        ei1, 1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
+        ei, 1 if ei<1 else factorial(ZZ(ei-1)), inter_polys)
 
-        ans = {p: gammas_to_displacements(l, index, p, gamma_expansion_product(l0, p))
+        ans = {p: gammas_to_displacements(l, p, gamma_expansion_product(l0, p))
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
-        # If start==index==0, we need to extract a normalization factor.
-        if start == index == 0:
-            self.zero_offsets[N] = ans
+        # If start==0, we need to extract a normalization factor.
+        if start == 0:
+            self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
         return ans
 
     def amortized_padic_H_values_ferry(self, t, start, pclass):
@@ -611,7 +610,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         if ps1 >= e:
             # We still need to compute displacements if start==0, in order to set up zero_offsets.
             if start == 0:
-                displacements = self.displacements(N, start, pclass, 0)
+                displacements = self.displacements(N, start, pclass)
             return
         ei1 = e - ps1
 
@@ -619,7 +618,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         indices = self._prime_range(t, N)[d][pclass]
 
         # Retrieve precomputation results.
-        displacements = self.displacements(N, start, pclass, 0)
+        displacements = self.displacements(N, start, pclass)
 
         for p in indices:
             pe = p if ei1==1 else p**ei1
@@ -627,7 +626,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             tpow = (t%pe).powermod(mi, pe) # faster than power_mod(t, mi, pe)
             if ei1>1:
                 tpow *= multlifts[p](mi)
-            tmp = tpow*displacements[p]%pe
+            tmp = tpow*displacements[p][0]%pe
             vectors[p] += tmp * y1*p**ps1
 
             if debug:
@@ -736,7 +735,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 i += 1
 
         # Retrieve precomputed values.
-        displacements = self.displacements(N, start, pclass, 1)
+        displacements = self.displacements(N, start, pclass)
 
         # Compute the amortized matrix product.
         ans = self.amortized_padic_H_values_matrix(t, N, ei, y, start, end, pclass)
@@ -745,7 +744,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             pe = p if ei==1 else p**ei
 
             # Update the precomputed series to include [z]^{mi+1}.
-            w = displacements[p]
+            w = displacements[p][1]
             mip = (start*(p-1)).floor()+1
             tpow = (t%pe).powermod(mip, pe) # faster than power_mod(t, mi, pe)
             if ei>1:
@@ -943,8 +942,7 @@ def compare(log2N, t, e=1, chained=None, vssage=True, vsmagma=True, higher_power
                     d = s.denominator()
                     for pclass in range(d):
                         if gcd(d, pclass) == 1:
-                            for j in range(2):
-                                H.displacements(2**i, s, pclass, j)
+                            H.displacements(2**i, s, pclass)
                 print("Additional precomputation: %.2f s" % (get_utime()-start))
         start = get_utime()
         foo = H.amortized_padic_H_values(t, 2**i, chained)
