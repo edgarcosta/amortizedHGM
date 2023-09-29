@@ -1,9 +1,8 @@
-from .hgm_modpe import AmortizingHypergeometricData, compare
+from .hgm_modpe import AmortizingHypergeometricData
 
-__all__ = ["AmortizingHypergeometricData", "compare"]
+__all__ = ["AmortizingHypergeometricData"]
 
 assert AmortizingHypergeometricData
-assert compare
 
 from .hgm import (
     AccRemForest,

@@ -84,6 +84,9 @@ class pAdicLogGammaCache(UniqueRepresentation):
         """
         self.N = self.e + 1
         self.cache = {}
+        if hasattr(self, "_expansion_at_0"):
+            # lazy_attributes store themselves as a normal attribute
+            del self._expansion_at_0
 
     def save(self, filename):
         """
@@ -179,22 +182,25 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: all(Zp(p)(a/b + 3*p, e).gamma() == c^i * Zp(p)(f(3*p), e).exp() for ((a,b,p),(c,i,f)) in cache.cache.items())
             True
         """
+        tmp = self.cache.get(abp)
+        if tmp is not None:
+            return tmp[0]*tmp[1], 1, tmp[2]
+        a, b, p = abp
         try:
-            if abp in self.cache:
-                tmp = self.cache[abp]
-                return (tmp[0]*tmp[1], 1, tmp[2])
             # Use the Legendre relation if possible.
-            a, b, p = abp
-            tmp = self.cache[b-a, b, p]
-            return (tmp[0], -1, tmp[2])
+            c, d, f = self.cache[b-a, b, p]
+            if f is None:
+                return c, -1, f
+            # substitute x -> -x (and multiply by -1)
+            return c, -1, [f[j] if j%2 else -f[j] for j in range(len(f))]
         except KeyError:
-            a, b, p = abp
             if p <= self.e:
                 raise ValueError(f"Cache does not support primes smaller than {self.e+1}")
             if p >= self.N:
                 N = max(p+1, 2*self.N)
                 self.increase_N(N)
             self._set_expansion_at_offset(b)
+            assert abp in self.cache or (b-a, b, p) in self.cache
             return self.expansion(abp)
 
     def _expansion0_prep(self):
@@ -348,7 +354,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
                             if p<=d and not d%p:
                                 continue
 
-                            # Combine the expansion at 0 with the contribution from 
+                            # Combine the expansion at 0 with the contribution from
                             # harmonic sums, then recenter the log expansion.
                             l = s[::]
                             gamma_translate(l, p, harmonics, e, b, d, normalized)
