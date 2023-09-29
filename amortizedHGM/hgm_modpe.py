@@ -35,6 +35,7 @@ from .hgm_misc import (
     mbound_dict_c,
     moddiv,
     moddiv_int,
+    multiplicative_lift,
     prime_range_by_residues,
     recenter_mod,
     truncated_exp,
@@ -395,7 +396,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         """
         e = self.e
         dens = set([1])
-        for (start, _) in self.truncated_starts_ends(e):
+        for (start, _) in self.truncated_starts_ends():
             d = start.denominator()
             for pclass in range(d):
                 if d.gcd(pclass) == 1:
@@ -800,14 +801,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             P = ZZ['k1']
             k1 = P.gen()
             den = factorial(ZZ(e-1))
-            multlifts = []
-            for p in self._prime_range(t, N)[1][0]:
-                pe = p**e
-                tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
-                tmp2 = moddiv_int(truncated_log_mod(tmp, e, pe), 1-p, pe)
-                w1 = moddiv(truncated_exp(tmp2*k1, e), den, pe)
-                multlifts.append((p, w1))
-            multlifts = dict(multlifts)
+            multlifts = {p: multiplicative_lift(t, p, e, den, k1) for p in self._prime_range(t, N)[1][0]}
 
         if debug:
             assert all(power_mod(t*multlifts[p](1),p**e-1,p**e) == 1 for p in self._prime_range(t, N)[1][0])
@@ -945,7 +939,7 @@ def compare(log2N, t, e=1, chained=None, vssage=True, vsmagma=True, higher_power
             print("Amortized Gamma: %.2f s" % (get_utime()-start))
             if extra_cache:
                 start = get_utime()
-                for (s, _) in H.truncated_starts_ends(e):
+                for (s, _) in H.truncated_starts_ends():
                     d = s.denominator()
                     for pclass in range(d):
                         if gcd(d, pclass) == 1:
@@ -980,10 +974,10 @@ def compare(log2N, t, e=1, chained=None, vssage=True, vsmagma=True, higher_power
             s = set(H.wild_primes())
             s = s.union(H.tame_primes(t))
             foo2 = []
-            n = self.degree()
+            n = H.degree()
             for q in range(2**i):
                 p, f = ZZ(q).is_prime_power(get_data=True)
-                if f > 1 and f <= n and p not in s:
+                if f > 1 and f <= n//2 and p not in s:
                     foo2.append((q,p,f))
         if higher_powers_sage:
             start = get_utime()
