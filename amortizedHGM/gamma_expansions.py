@@ -10,7 +10,6 @@ from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.persist import loads, dumps
 from sage.structure.unique_representation import UniqueRepresentation
 from sage.matrix.constructor import matrix
-from sage.modules.free_module_element import vector
 
 from pyrforest import batch_harmonic, batch_factorial
 from .hgm_misc import (
