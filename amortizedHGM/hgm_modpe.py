@@ -540,8 +540,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 flgl[i.as_integer_ratio()] = j
         tmp2 = tuple(tmp2[i].as_integer_ratio() for i in range(e))
 
-        R = ZZ['x']
-        l = (gammas, flgl, tmp.numer(), tmp.denom(), tmp2, index, R.gen(), r, d, ei, factorial(ZZ(ei-1)), inter_polys)
+        l = (gammas, flgl, tmp.numer(), tmp.denom(), tmp2, index, r, d, ei, factorial(ZZ(ei-1)), inter_polys)
         ans = {p: gammas_to_displacements(l, p)
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==index==0, we need to extract a normalization factor.

@@ -169,7 +169,7 @@ cpdef gammas_to_displacements(l, Integer p):
     cdef Integer r, d, pe, p1, arg0, gammaprodnum, gammaprodden, tmp0, inum, iden
 
     # Import local variables from the calling scope. These do not depend on p.
-    gammas, flgl, gammaprodnum, gammaprodden, tmp2, index, x, r, d, e, efac, inter_polys = l
+    gammas, flgl, gammaprodnum, gammaprodden, tmp2, index, r, d, e, efac, inter_polys = l
     # Note: gammaprodnum/gammaprodden records the effect of integer shifts
     # on the constant term of the Gamma series.
 
