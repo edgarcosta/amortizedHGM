@@ -950,8 +950,23 @@ class AmortizingHypergeometricData(HypergeometricData):
 
             sage: H = AmortizingHypergeometricData(cyclotomic=([4,4,2,2], [3,3,3]))
             sage: H.compare(14, 1337, vssage=False)
-            
-        e.g: compare(15, 1337, vssage=False, cyclotomic=
+            2^12
+            Amortized Gamma: 0.26 s
+            Additional precomputation: 0.05 s
+            Amortized HG: 0.08 s
+            Magma:     2.20 s
+
+            2^13
+            Amortized Gamma: 0.16 s
+            Additional precomputation: 0.09 s
+            Amortized HG: 0.08 s
+            Magma:     8.59 s
+
+            2^14
+            Amortized Gamma: 0.32 s
+            Additional precomputation: 0.17 s
+            Amortized HG: 0.21 s
+            Magma:     31.02 s
         """
         import resource
         def get_utime():

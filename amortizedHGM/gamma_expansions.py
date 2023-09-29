@@ -85,6 +85,9 @@ class pAdicLogGammaCache(UniqueRepresentation):
         """
         self.N = self.e + 1
         self.cache = {}
+        if hasattr(self, "_expansion_at_0"):
+            # lazy_attributes store themselves as a normal attribute
+            del self._expansion_at_0
 
     def save(self, filename):
         """
@@ -189,7 +192,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             c, d, f = self.cache[b-a, b, p]
             if f is None:
                 return c, -1, f
-            return c, -1, [-f[j] if j%2 else f[j] for j in range(len(f))]
+            return c, -1, [f[j] if j%2 else -f[j] for j in range(len(f))]
         except KeyError:
             if p <= self.e:
                 raise ValueError(f"Cache does not support primes smaller than {self.e+1}")
