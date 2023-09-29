@@ -187,6 +187,7 @@ cpdef gamma_expansion_product(l, Integer p):
         if e > 1:
             for i in range(e):
                 # Beware that len(tmp1) can exceed e.
+#                 gammasum[e-1-i] += j1*tmp1[-1-i]*(-1 if j0==-1 and i%2 else 1)
                 gammasum[e-1-i] += j1*tmp1[-1-i]
     
     return num, den, gammasum
