@@ -13,10 +13,10 @@ from sage.matrix.constructor import matrix
 
 from pyrforest import batch_harmonic, batch_factorial
 from .hgm_misc import (
+    gamma_translate,
     moddiv_int,
-    eval_poly_as_gen,
+    sign_flip,
     truncated_log_mod,
-    gamma_translate
 )
 
 class pAdicLogGammaCache(UniqueRepresentation):
@@ -203,12 +203,12 @@ class pAdicLogGammaCache(UniqueRepresentation):
         a, b, p = abp
         try:
             # Use the Legendre relation if possible.
-            c, d, f = self.cache[b-a, b, p]
+            c, _, f = self.cache[b-a, b, p]
             if f is None:
                 return c, -1, f
             # substitute x -> -x (and multiply by -1)
-            e = len(f)
-            return c, -1, [f[j] if (e-j)%2 else -f[j] for j in range(e)]
+            e = self.e
+            return c, -1, sign_flip(f, e)
         except KeyError:
             if p <= self.e:
                 raise ValueError(f"Cache does not support primes smaller than {self.e+1}")
@@ -294,7 +294,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         logfac = truncated_log_mod(-harmonics[1][p][0,1], e, pe[-1]) # = log -(p-1)!
         tmp = matrix(ZZ, 1, e-1, [logfac] + [(-1 if j%2 else 1)*pe[j-1]*moddiv_int(-harmonics[j][p][0,0], j*harmonics[j][p][0,1], pe[e-j-1]) for j in range(1,e-1)])
         tmp *= mat
-        return [moddiv_int(tmp[0,i], den, pe[-1]).divide_knowing_divisible_by(pe[i]) for i in range(e-2,-1,-1)] + [0]
+        return [moddiv_int(tmp[0,i].divide_knowing_divisible_by(pe[i]), den, pe[-1-i]) for i in range(e-2,-1,-1)] + [0]
 
     @lazy_attribute
     def _expansion_at_0(self):
@@ -349,15 +349,12 @@ class pAdicLogGammaCache(UniqueRepresentation):
         one, minusone = ZZ(1), ZZ(-1)
         if e == 1:
             if d == 1:
-                for p in prime_range(3, n):
-                    self.cache[0, 1, p] = (minusone, -1, None)
+                self.cache.update({(0, 1, p): (minusone, -1, None) for p in prime_range(3, n)})
             else:
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
                         fac = batch_factorial(n, 1, b/d)
                         for p, f in fac.items(): # inner loop
-                            if p<=d and not d%p:
-                                continue
                             sgn, i = divmod(-b*p, d) # computes both quotient and remainder
                             self.cache[i, d, p] = (f, -1 if sgn%2 else 1, None)
         else:
@@ -365,26 +362,25 @@ class pAdicLogGammaCache(UniqueRepresentation):
             R = ZZ['x']
             x = R.gen()
             if d == 1:
-                for p, s in zero_exp.items():
-                    self.cache[0, 1, p] = (minusone, -1, s)
+                self.cache.update({(0, 1, p): (minusone, -1, s) for p, s in zero_exp.items()})
             else:
                 Z1 = ZZ(1)
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
                         harmonics = {j: batch_harmonic(n, e-j if (j>1 or normalized) else e, b/d, j, proj=True) for j in range(1, e)}
                         for p, s in zero_exp.items(): #inner loop
-                            if p<=d and not d%p:
-                                continue
+                            try:
+                                # Combine the expansion at 0 with the contribution from
+                                # harmonic sums, then recenter the log expansion.
+                                l = s[::]
+                                gamma_translate(l, p, harmonics, e, b, d, normalized)
 
-                            # Combine the expansion at 0 with the contribution from
-                            # harmonic sums, then recenter the log expansion.
-                            l = s[::]
-                            gamma_translate(l, p, harmonics, e, b, d, normalized)
+                                # If not normalized, extract the constant term.
+                                c0 = Z1 if normalized else harmonics[1][p][0,1]
 
-                            # If not normalized, extract the constant term.
-                            c0 = Z1 if normalized else harmonics[1][p][0,1]
-
-                            # Return the computed expansion.
-                            sgn, i = divmod(-b*p, d) # computes both quotient and remainder
-                            self.cache[i, d, p] = (c0, -1 if sgn%2 else 1, l)
+                                # Return the computed expansion.
+                                sgn, i = divmod(-b*p, d) # computes both quotient and remainder
+                                self.cache[i, d, p] = (c0, -1 if sgn%2 else 1, l)
+                            except ZeroDivisionError: # Occurs if d%p == 0
+                                pass
 
