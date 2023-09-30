@@ -153,7 +153,7 @@ cpdef int gamma_translate(l, Integer p, harmonics, int e,
          l[-1-j] += moddiv_int(-tmp*h[0,0], j*h[0,1], pe[e-j-1])
 
     # Recenter the log expansion.
-    tmp = p*moddiv_int(-b, d, p**(e-1))
+    tmp = p*moddiv_int(-b, d, pe[e-2])
     for i in range(1, e):
         for j in range(i, 0, -1):
             l[j] += l[j-1]*tmp
@@ -187,7 +187,6 @@ cpdef gamma_expansion_product(l, Integer p):
         if e > 1:
             for i in range(e):
                 # Beware that len(tmp1) can exceed e.
-#                 gammasum[e-1-i] += j1*tmp1[-1-i]*(-1 if j0==-1 and i%2 else 1)
                 gammasum[e-1-i] += j1*tmp1[-1-i]
     
     return num, den, gammasum
@@ -197,7 +196,7 @@ cpdef gammas_to_displacements(l, Integer p, t):
     # Assumes t is the output of gamma_expansion_product.
 
     cdef int i, j, j0, j1, etmp, e1, e1fac, e, efac, index
-    cdef Integer r, d, pe, p1, arg0, gammaprodnum, gammaprodden, num, den, tmp0, inum, iden
+    cdef Integer r, d, pe, p1, arg0, gammaprodnum, gammaprodden, num, den
 
     num, den, gammasum0 = t
     
@@ -231,7 +230,7 @@ cpdef gammas_to_displacements(l, Integer p, t):
                 for j in range(e):
                     arg0 += p1
                     tmp1 += truncated_exp_int(eval_poly_as_gen(gammasum, arg0), e)*inter_polys[j]
-                ans.append(moddiv(tmp1*gammaprodnum, gammaprodden*efac**2, pe))
+                ans.append(moddiv(tmp1*gammaprodnum, gammaprodden*efac, pe))
     return ans
 
 cpdef Integer fast_hgm_sum(tuple w, array.array mat, ans, Integer pe1, int s):

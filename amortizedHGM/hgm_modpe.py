@@ -550,7 +550,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         inter_polys = interpolation_polys(ei, R1.gen())
         l = (tuple(t.as_integer_ratio() for t in tmp), tmp2, r, d, 
         ei1, 1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
-        ei, 1 if ei<1 else factorial(ZZ(ei-1)), inter_polys)
+        ei, 1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys)
 
         ans = {p: gammas_to_displacements(l, p, gamma_expansion_product(l0, p))
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
