@@ -86,7 +86,9 @@ cpdef multiplicative_lift(t, Integer p, int e, Integer efac, x):
     """
     cdef Integer pe = p**e
     cdef Integer tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
-    cdef Integer tmp2 = moddiv_int(truncated_log_mod(tmp, e, pe), 1-p, pe)
+    cdef Integer tmp2 = truncated_log_mod(tmp, e, pe)
+    if e > 2:
+        tmp2 = moddiv_int(tmp2, 1-p, pe)
     return moddiv(truncated_exp(tmp2*x, e), efac, pe)
 
 # *******
