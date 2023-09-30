@@ -34,9 +34,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
     EXAMPLES::
 
+        sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
         sage: cache = pAdicLogGammaCache(2)
         sage: cache.expansion((3,4,97))
-        (-7780, 1, 50*x + 3492)
+        (-7780, 1, [50, 3492])
     """
     def __init__(self, e):
         self.e = e
@@ -52,10 +53,11 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: cache = pAdicLogGammaCache(2)
             sage: cache.increase_N(100)
             sage: cache.expansion((3,4,97))
-            (-7780, 1, 50*x + 3492)
+            (-7780, 1, [50, 3492])
         """
         if N > self.N:
             Nold = self.N
@@ -72,12 +74,14 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: cache = pAdicLogGammaCache(2)
+            sage: cache.clear_cache()
             sage: len(cache.cache)
             0
             sage: val = cache.expansion((3,4,97))
             sage: len(cache.cache)
-            48
+            24
             sage: cache.clear_cache()
             sage: len(cache.cache)
             0
@@ -95,34 +99,36 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: filename = tmp_filename()
             sage: cache = pAdicLogGammaCache(2)
             sage: cache.clear_cache()
             sage: val = cache.expansion((3,4,97))
             sage: len(cache.cache)
-            48
+            24
             sage: cache.save(filename)
             sage: cache.clear_cache()
             sage: len(cache.cache)
             0
             sage: cache.load(filename)
             sage: len(cache.cache)
-            48
+            24
             sage: os.remove(filename)
         """
         with open(filename, "wb") as fobj:
-            fobj.write(dumps((self.e, self.N, self.cache), compress=True))
+            fobj.write(dumps((self.e, self.N, self.cache, self._expansion_at_0), compress=True))
 
     def load(self, filename):
         """
-        Load the cache from a previously saved file.
-        This overwrites the current cache.
+        Load the cache from a previously saved file,
+        adding them to the current cache.
 
         Note that the value e1 for the saved file can be larger than this e,
         but in this case any p with e < p <= e1 will be missing.
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: filename = tmp_filename()
             sage: cache = pAdicLogGammaCache(3)
             sage: cache.clear_cache()
@@ -131,26 +137,32 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache2 = pAdicLogGammaCache(2)
             sage: _ = cache2.expansion((3,4,97))
             sage: c2 = cache2.cache
+            sage: cache2.clear_cache()
             sage: cache2.load(filename)
             sage: set(c2).difference(set(cache2.cache))
-            {(1, 4, 3), (3, 4, 3)}
-            sage: all(c2[a,b,p][0] % p^2 == cache2.cache[a,b,p][0] and c2[a,b,p][1] == cache2.cache[a,b,p][1] and c2[a,b,p][2].map_coefficients(lambda u: (u % p^2)) == cache2.cache[a,b,p][2] for (a,b,p) in cache2.cache)
+            {(1, 4, 3)}
+            sage: all(c2[a,b,p][0] % p^2 == cache2.cache[a,b,p][0] and c2[a,b,p][1] == cache2.cache[a,b,p][1] and [u % p^2 for u in c2[a,b,p][2]] == cache2.cache[a,b,p][2] for (a,b,p) in cache2.cache)
             True
             sage: os.remove(filename)
         """
         with open(filename, "rb") as fobj:
-            e, N, cache = loads(fobj.read(), compress=True)
+            e, N, cache, exp0 = loads(fobj.read(), compress=True)
+        if N > self.N:
+            self.N = N
+            self._expansion_at_0.update(exp0)
         if e < self.e:
             raise ValueError("Cannot load from file with lower precision")
         if e > self.e:
             e = self.e
-            for (a, b, p), (c, i, f) in cache.items():
-                pe = p**e
-                c = c % pe
-                f = f.map_coefficients(lambda u: (u % pe))
-                cache[a,b,p] = (c, i, f)
-        self.N = N
-        self.cache = cache
+            peD = {}
+            for (a, b, p), (c, d, f) in cache.items():
+                if p not in peD:
+                    peD[p] = [p**(i+1) for i in range(e)]
+                pe = peD[p]
+                c = c % pe[-1]
+                f = [f[i] % pe[i] for i in range(e)]
+                cache[a,b,p] = (c, d, f)
+        self.cache.update(cache)
 
     def expansion(self, abp):
         """
@@ -168,18 +180,21 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: e = 5
             sage: cache = pAdicLogGammaCache(e)
             sage: c, i, f = cache.expansion((5,7,83)); (c, i, f)
-            (1378756068, -1, -38*x^4 + 5061*x^3 - 107687*x^2 + 24453648*x - 2520179713)
+            (1378756068, -1, [38, -5061, 107687, -24453648, 2520179713])
+            sage: R = Zp(83)
+            sage: S.<x> = R[]
             sage: Zp(83)(5/7 + 3*83, e).gamma()
             46 + 72*83 + 14*83^2 + 71*83^3 + 30*83^4 + O(83^5)
-            sage: c^i * Zp(83)(f(3*83), e).exp()
+            sage: c^i * Zp(83)(S(list(reversed(f)))(3*83), e).exp() # FIXME
             46 + 72*83 + 14*83^2 + 71*83^3 + 30*83^4 + O(83^5)
 
         TESTS::
 
-            sage: all(Zp(p)(a/b + 3*p, e).gamma() == c^i * Zp(p)(f(3*p), e).exp() for ((a,b,p),(c,i,f)) in cache.cache.items())
+            sage: all(Zp(p)(a/b + 3*p, e).gamma() == c^i * Zp(p)(f(3*p), e).exp() for ((a,b,p),(c,i,f)) in cache.cache.items()) # FIXME
             True
         """
         tmp = self.cache.get(abp)
@@ -218,6 +233,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: cache = pAdicLogGammaCache(5)
             sage: cache.clear_cache()
             sage: cache.increase_N(20)
@@ -261,6 +277,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: cache = pAdicLogGammaCache(5)
             sage: cache.clear_cache()
             sage: cache.increase_N(20)
@@ -292,6 +309,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: cache = pAdicLogGammaCache(5)
             sage: cache.clear_cache()
             sage: cache.increase_N(20)
@@ -311,6 +329,8 @@ class pAdicLogGammaCache(UniqueRepresentation):
         all rational numbers with denominator `d` between 0 and 1,
         for primes p up to the current bound `N`.
 
+        FIXME: Add explanation for the storage format of the cache
+
         INPUT:
 
         - `d` -- a positive integer, the denominator
@@ -318,11 +338,12 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
             sage: cache = pAdicLogGammaCache(3)
             sage: cache.increase_N(20)
             sage: cache._set_expansion_at_offset(3)
             sage: cache.cache[2,3,7]
-            (-2, 1, 2*x^2 + 14*x + 147)
+            (2, -1, [2, 14, 147])
         """
         n, e = self.N, self.e
         one, minusone = ZZ(1), ZZ(-1)
