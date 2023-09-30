@@ -30,17 +30,14 @@ from .gamma_expansions import (
     pAdicLogGammaCache,
 )
 from .hgm_misc import (
-    gamma_expansion_product,
     fast_hgm_sum,
+    gamma_expansion_product,
     gammas_to_displacements,
     mbound_dict_c,
-    moddiv,
     moddiv_int,
     multiplicative_lift,
     prime_range_by_residues,
     recenter_mod,
-    truncated_exp,
-    truncated_log_mod,
 )
 
 def interpolation_polys(e, x):
@@ -365,23 +362,17 @@ class AmortizingHypergeometricData(HypergeometricData):
              0: (-1, 0)}
         """
         # First count frequencies.
-        flgl = {}
+        freq = {}
         for a in self.alpha():
-            if a in flgl:
-                flgl[a] += 1
-            else:
-                flgl[a] = 1
+            freq[a] = freq.get(a, 0) + 1
         for b in self.beta():
-            if b in flgl:
-                flgl[b] -= 1
-            else:
-                flgl[b] = -1
+            freq[b] = freq.get(b, 0) - 1
         # We shift the term corresponding to a or b by 1 because we're taking
         # the fractional part of a negative number when less than start.
         # We also need to separately indicate any values equal to start.
         shift = self._starts_to_rationals[start][pclass]
         flgl = {QQ(i + shift + (1 if i <= start else 0)): (ZZ(j), ZZ(1) if i == start else ZZ(0))
-                for i,j in flgl.items()}
+                for i,j in freq.items()}
         return flgl
 
     @cached_method
@@ -410,8 +401,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             for pclass in range(d):
                 if d.gcd(pclass) == 1:
                     # r = start.numerator()*(pclass-1) % d
-                    flgl = self._numden_factors(start, pclass)
-                    for i in flgl:
+                    for i in self._numden_factors(start, pclass):
                         dens.add(i.denominator())
         return dens
 
@@ -540,17 +530,17 @@ class AmortizingHypergeometricData(HypergeometricData):
         tmp2 = [tuple(t[i].as_integer_ratio() for i in range(e)) for t in tmp2]
 
         gammas = self.gammas_cache
-        l0 = (gammas, flgl, e-min(ps,ps1))
-
-        d = start.denominator()
-        r = start.numerator()*(pclass-1) % d
         ei1 = e-ps1
         ei = e-ps
+        l0 = (gammas, flgl, max(ei1, ei))
+        
+        d = start.denominator()
+        r = start.numerator()*(pclass-1) % d
         R1 = ZZ['k1'] # k1 stands for k-1
         inter_polys = interpolation_polys(ei, R1.gen())
         l = (tuple(t.as_integer_ratio() for t in tmp), tmp2, r, d, 
-        ei1, 1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
-        ei, 1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys)
+            ei1, 1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
+            ei, 1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys)
 
         ans = {p: gammas_to_displacements(l, p, gamma_expansion_product(l0, p))
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
@@ -582,13 +572,11 @@ class AmortizingHypergeometricData(HypergeometricData):
             [ -43776 1529437]
         """
         y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
-        if ps1:
-            y1 = 0
+        y1 *= 0**ps1
         multiplier = lambda x: -x if x else ZZ(-1)
         flgl = self._numden_factors(start, pclass)
         feq_seed = t * prod(multiplier(i-k)**j[0] for i,j in flgl.items() for k in range(j[1]+1))
-        feq_seed_num = feq_seed.numer()
-        feq_seed_den = feq_seed.denom()
+        feq_seed_num, feq_seed_den = feq_seed.as_integer_ratio()
         return matrix(ZZ, 2, 2, [feq_seed_den, 0, feq_seed_den*y1, feq_seed_num])
 
     def amortized_padic_H_values_step(self, vectors, t, N, start, pclass, multlifts, debug=False):
@@ -652,17 +640,19 @@ class AmortizingHypergeometricData(HypergeometricData):
         displacements = self.displacements(N, start, pclass)
 
         for p in indices:
-            pe = p if ei1==1 else p**ei1
             mi = (start*(p-1)).floor()
-            tpow = (t%pe).powermod(mi, pe) # faster than power_mod(t, mi, pe)
-            if ei1>1:
-                tpow *= multlifts[p](mi)
+            if ei1 == 1:
+                pe = p
+                tpow = (t%pe).powermod(mi, pe) # faster than power_mod(t, mi, p)
+            else:
+                pe = p**ei1
+                tpow = (t%pe).powermod(mi, pe) * multlifts[p](mi)
             tmp = tpow*displacements[p][0]%pe
             vectors[p] += tmp * y1*p**ps1
 
             if debug:
-                print("comparing step", start, p)
-                assert tmp == self.verify_summand(p, t, mi, ei)
+                print("checking step", start, p, mi, ps1)
+                assert tmp == self.verify_summand(p, t, mi, ei1)*self.zero_offsets[N][p]
 
     def amortized_padic_H_values_matrix(self, t, N, ei, y, start, end, pclass,
                                         V=None, ans=None):
@@ -835,36 +825,37 @@ class AmortizingHypergeometricData(HypergeometricData):
         ans = self.amortized_padic_H_values_matrix(t, N, ei, y, start, end, pclass)
 
         for p, tmp in ans.items(): #inner loop
-            pe = p if ei==1 else p**ei
-
-            # Update the precomputed series to include [z]^{mi+1}.
             w = displacements[p][1]
             mip = (start*(p-1)).floor()+1
-            tpow = (t%pe).powermod(mip, pe) # faster than power_mod(t, mi, pe)
-            if ei>1:
-                tpow *= multlifts[p](mip)
-                w = w.multiplication_trunc(multlifts[p], ei)
+
+            # Update the precomputed series to include [z]^{mi+1}.
+            if ei == 1:
+                tpow = (t%p).powermod(mip, p) # faster than power_mod(t, mi, p)
+
+                tmp2 = tpow*w
+                tmp2 = moddiv_int(tmp2*tmp[-1,0], tmp[0,0], p)
+            else:
+                pe = p**ei
+                pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
+                tpow = (t%pe).powermod(mip, pe) * multlifts[p](mip)
+                w = tuple(w.multiplication_trunc(multlifts[p], ei))
+
+                # Compute the sum using a Cython loop.
+                tmp2 = fast_hgm_sum(w, mat_as_array, tmp, pe1, ei)
+                tmp2 = moddiv_int(tpow*tmp2, de*tmp[0,0], pe)
 
             if debug:
                 # Verify the computed value of w(0).
                 print("checking w", start, p, mip, ps)
-                assert (w if e==1 else w(0)) == self.verify_summand(p, t, mip, ei)
+                assert tpow*(w if ei==1 else w[0]) == self.verify_summand(p, t, mip, ei)*self.zero_offsets[N][p]
 
-            # Compute the sum using a Cython loop.
-            pe1 = (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
-            w = (w,) if ei==1 else tuple(w)
-            tmp2 = fast_hgm_sum(w, mat_as_array, tmp, pe1, ei)
-            tmp2 = moddiv_int(tpow*tmp2, de*tmp[0,0], pe)
-
-            if debug:
                 # Verify that the sum, including the sign, is being computed correctly.
                 mi1 = (end*(p-1)).floor()
-                if p < 400:
-                    print("checking sum", start, p, mip, mi1, ps)
-                    assert tmp2 == y*sum(self.verify_summand(p, t, m, ei) for m in range(mi+1,mi1))
+                print("checking sum", start, p, mip, mi1, ps)
+                assert tmp2 == y*sum(self.verify_summand(p, t, m, ei) for m in range(mip,mi1))*self.zero_offsets[N][p]
 
             # Include the variable power of p and accumulate the result.
-            vectors[p] += tmp2*p**ps
+            vectors[p] += tmp2 * p**ps
 
     def amortized_padic_H_values(self, t, N, chained=None, debug=False):
         """
@@ -915,11 +906,11 @@ class AmortizingHypergeometricData(HypergeometricData):
             den = factorial(ZZ(e-1))
             multlifts = {p: multiplicative_lift(t, p, e, den, k1) for p in self._prime_range(t, N)[1][0]}
 
-        if debug:
-            assert all(power_mod(t*multlifts[p](1),p**e-1,p**e) == 1 for p in self._prime_range(t, N)[1][0])
-            assert all(multlifts[p](1)%p == 1 for p in multlifts)
+            if debug:
+                assert all(power_mod(t*multlifts[p](1),p**e-1,p**e) == 1 for p in self._prime_range(t, N)[1][0])
+                assert all(multlifts[p](1)%p == 1 for p in multlifts)
 
-        tmp = identity_matrix(2) if chained else 0
+        tmp = identity_matrix(2) if chained else ZZ(0)
         vectors = {p: tmp for p in self._prime_range(t, N)[1][0]}
         for start, end in self.truncated_starts_ends():
             d = start.denominator()
@@ -930,7 +921,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                         Ti = self.amortized_padic_H_values_ferry(t, start, pclass)
                         # Update vectors by multiplying by T_i*S_i(p).
                         y, ps = self.interval_mults[start]
-                        self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=Ti, ans=vectors, debug=debug)
+                        self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=Ti, ans=vectors)
                     else:
                         # Update vectors with P_{m_i}.
                         self.amortized_padic_H_values_step(vectors, t, N, start, pclass, multlifts, debug)
@@ -1034,7 +1025,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Ask Magma to check the functional equation.
         return LSmagma.CFENew()
 
-    def compare(self, log2N, t, chained=None, vssage=True, vsmagma=True, higher_powers_sage=False, higher_powers_magma=False, extra_cache=True):
+    def compare(self, log2N, t, chained=None, vssage=True, vsmagma=True, higher_powers_sage=False, higher_powers_magma=False, extra_cache=True, debug=False):
         r"""
         INPUT:
 
@@ -1099,7 +1090,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                                 self.displacements(2**i, s, pclass)
                     print("Additional precomputation: %.2f s" % (get_utime()-start))
             start = get_utime()
-            foo = self.amortized_padic_H_values(t, 2**i, chained)
+            foo = self.amortized_padic_H_values(t, 2**i, chained, debug=debug)
             print("Amortized HG: %.2f s" % (get_utime()-start))
             self.gammas_cache.clear_cache()
             #print_maxrss()
