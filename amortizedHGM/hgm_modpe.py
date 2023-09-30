@@ -36,8 +36,7 @@ from .hgm_misc import (
     mbound_dict_c,
     moddiv_int,
     multiplicative_lift,
-    prime_range_by_residues,
-    recenter_mod,
+    prime_range_by_residues
 )
 
 def interpolation_polys(e, x):
@@ -932,12 +931,11 @@ class AmortizingHypergeometricData(HypergeometricData):
         ans = []
         if e == 1 and chained:
             for p, mat in vectors.items():
-                ans.append((p, recenter_mod(moddiv_int(mat[1,0], mat[0,0], p), p)))
+                ans.append((p, moddiv_int(mat[1,0], mat[0,0], p)))
         else:
             zero_offsets = self.zero_offsets[N]
             for p, tmp in vectors.items():
-                pe = p**e
-                ans.append((p, recenter_mod(moddiv_int(tmp, (1-p)*zero_offsets[p], pe), pe)))
+                ans.append((p, moddiv_int(tmp, (1-p)*zero_offsets[p], p**e)))
         return dict(ans)
 
     def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):

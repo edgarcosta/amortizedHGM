@@ -10,11 +10,12 @@ from cpython cimport array
 
 cpdef Integer moddiv_int(Integer a, Integer b, Integer m):
     r"""
-    Compute a/b mod m. All of a, b, and m must be Sage integers.
+    Compute x with |x| <= m/2 and x == a/b mod m. All of a, b, and m must be Sage integers.
 
     This avoids creating any elements of QQ.
     """
-    return a*b.inverse_mod(m)%m
+    cdef Integer x = a*b.inverse_mod(m)%m
+    return x if x <= m>>1 else x-m
 
 cdef moddiv(a, Integer b, Integer m):
     r"""
@@ -23,12 +24,6 @@ cdef moddiv(a, Integer b, Integer m):
     This avoids creating any elements of QQ.
     """
     return a*b.inverse_mod(m)%m
-
-cpdef Integer recenter_mod(Integer x, Integer m):
-    r"""
-    Convert a residue class modulo m into a representative centered at 0.
-    """
-    return x if x <= m//2 else x-m
 
 cpdef truncated_log_mod(Integer x, int e, Integer m):
     r"""
