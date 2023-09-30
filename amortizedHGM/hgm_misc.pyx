@@ -32,6 +32,9 @@ cpdef truncated_log_mod(Integer x, int e, Integer m):
     cdef int i
     cdef Integer x1, tmp, mult
 
+    if e == 2:
+        return x-1
+
     x1 = 1-x
     tmp = Integer(0)
     mult = Integer(-1)
@@ -47,6 +50,9 @@ cpdef Integer truncated_exp_int(Integer x, int e):
     cdef int i
     cdef Integer tmp, mult
 
+    if e == 2:
+        return x+1
+
     tmp = Integer(1)
     mult = Integer(1)
     for i in range(e-1, 0, -1):
@@ -60,6 +66,9 @@ cpdef truncated_exp(x, int e):
     """
     cdef int i
     cdef Integer mult
+
+    if e == 2:
+        return x+1
 
     tmp = 1
     mult = Integer(1)
@@ -193,9 +202,8 @@ cdef Integer eval_poly_as_gen(l, Integer x):
 
     This implements "Horner's rule" which long predates Horner.
     """
-    cdef Integer ans, i
+    cdef Integer ans = Integer(0), i
     
-    ans = Integer(0)
     for i in l:
         ans = ans*x + i
     return ans
@@ -230,17 +238,17 @@ cpdef gammas_to_displacements(l, Integer p, t):
             p_powers = [p**(i+1) for i in range(etmp)]
             gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2[index][etmp-1-i][0], tmp2[index][etmp-1-i][1], p_powers[i]) for i in range(etmp)]
 
-            arg0 = p*(moddiv_int(-r, d, p) if etmp == 2 else moddiv_int(-r, d*(1-p), p_powers[-2]))
+            arg0 = Integer(0) if r==0 else p*(moddiv_int(-r, d, p) if etmp == 2 else moddiv_int(-r, d*(1-p), p_powers[-2]))
             if index == 0:
                 tmp3 = eval_poly_as_gen(gammasum, arg0) if arg0 else gammasum[-1]
                 ans.append(moddiv_int(gammaprodnum*truncated_exp_int(tmp3, e1), gammaprodden*e1fac, p_powers[-1]))
             else: # index == 1 and e > 1
                 p1 = p if e==2 else (p_powers[-1]-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
                 tmp1 = 0
-                for j in range(e):
+                for pol in inter_polys:
                     arg0 += p1
                     tmp3 = eval_poly_as_gen(gammasum, arg0)
-                    tmp1 += truncated_exp_int(tmp3, e)*inter_polys[j]
+                    tmp1 += truncated_exp_int(tmp3, e)*pol
                 ans.append(moddiv(tmp1*gammaprodnum, gammaprodden*efac, p_powers[-1]))
     return ans
 
