@@ -130,14 +130,16 @@ cpdef sign_flip(l, int e):
     cdef int j
     return [l[j] if (e-j)%2 else -l[j] for j in range(e)]
 
-cpdef int gamma_translate(l, Integer p, harmonics, int e,
-                      Integer b, Integer d, int normalized) except -1:
+cpdef gamma_translate(s, Integer p, harmonics, int e,
+                      Integer b, Integer d, int normalized):
     # Computes an inner loop in the computation of Gamma_p(x+c).
 
     cdef int i, j
     cdef Integer tmp
 
     p_powers = [p**(i+1) for i in range(e)]
+
+    l = s[::]
 
     # Combine the expansion at 0 with the contribution from harmonic sums.
     # Note that l starts out representing the *reversed* expansion at 0.
@@ -157,6 +159,8 @@ cpdef int gamma_translate(l, Integer p, harmonics, int e,
     else:
         for i in range(e):
             l[i] = l[i]%p_powers[i]
+
+    return l
 
 cpdef gamma_expansion_product(l, Integer p):
     # Compute a product of expansions of Gamma_p.

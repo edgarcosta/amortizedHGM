@@ -764,7 +764,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         - ``N`` -- the upper bound on primes
         - ``start`` -- a rational number `a/b`, the left endpoint of an interval
           (ie one of the alpha or beta)
-        - ``end`` -- the right endpoint o an interval
+        - ``end`` -- the right endpoint of an interval
         - ``pclass`` -- an integer between 0 and `b`, relatively prime to `b`,
           specifying which primes should be updated
         - ``multlifts`` -- A dictionary whose entry at `p` is a series in `k-1`
@@ -774,7 +774,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         OUTPUT:
 
         None, but updates `vectors` via
-           vectors[p] += S_i(p)
+           vectors[p] += sum_{m = floor(start*p)+1}^{floor(end*p)-1} P'_m
         where start = gamma_i, end = gamma_{i+1} and we consider primes in the residue class
         `pclass` modulo the denominator of `start`.
 
