@@ -546,7 +546,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==0, we need to extract a normalization factor.
         if start == 0:
-            if ei == e:
+            if ei1 == e:
                 self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
             else:
                 efac = factorial(ZZ(e-1))
