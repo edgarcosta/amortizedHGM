@@ -64,7 +64,7 @@ cpdef truncated_exp(x, int e):
         tmp = tmp*x + mult
     return tmp
 
-cpdef multiplicative_lift(t, Integer p, int e, Integer efac, x):
+cpdef multiplicative_lift(t, Integer p, int e, Integer efac, x=Integer(1)):
     r"""
     Compute a polynomial whose value at x is ([t]/t)**x mod p**e, where [t] denotes the
     p-adic multiplicative lift.
@@ -139,13 +139,10 @@ cpdef gamma_translate(s, Integer p, harmonics, int e,
 
     p_powers = [p**(i+1) for i in range(e)]
 
-    l = s[::]
-
-    # Combine the expansion at 0 with the contribution from harmonic sums.
-    # Note that l starts out representing the *reversed* expansion at 0.
-    for j in range(1, e):
-         h = harmonics[j][p] # A 1x2 matrix representing H_{j,gamma} mod p**(e-j)
-         l[-1-j] += moddiv_int((1 if j%2 else -1)*h[0,0], j*h[0,1], p_powers[e-j-1])
+    # Note that s starts out representing the *reversed* expansion at 0.
+    # We combine it with the contribution from harmonic sums.
+    l = [s[j-1] + moddiv_int((1 if (e-j)%2 else -1)*harmonics[e-j][p][0,0], (e-j)*harmonics[e-j][p][0,1], p_powers[j-1]) for j in range(1,e)]
+    l.append(s[e-1])
 
     # Recenter the log expansion.
     tmp = p*moddiv_int(-b, d, p_powers[e-2])
