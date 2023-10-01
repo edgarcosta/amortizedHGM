@@ -135,8 +135,11 @@ class AmortizingHypergeometricData(HypergeometricData):
         ...
         NotImplementedError: p is tame
     """
-    def __init__(self, cyclotomic=None, alpha_beta=None, gamma_list=None, e=None):
-        HypergeometricData.__init__(self, cyclotomic, alpha_beta, gamma_list)
+    def __init__(self, x=None, cyclotomic=None, alpha_beta=None, gamma_list=None, e=None):
+        if isinstance(x, HypergeometricData):
+            HypergeometricData.__init__(self, alpha_beta=x.alpha_beta())
+        else:
+            HypergeometricData.__init__(self, cyclotomic, alpha_beta, gamma_list)
         alpha, beta = self.alpha(), self.beta()
         self.denom = lcm(i for j in self.cyclotomic_data() for i in j)
 
@@ -844,7 +847,8 @@ i
                 pe = p**ei
                 pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
                 tpow = (t%pe).powermod(mip, pe) * multlifts[p](mip)
-                w = tuple(w.multiplication_trunc(multlifts[p], ei))
+                w = w.multiplication_trunc(multlifts[p], ei)
+                w = tuple(w[i] for i in range(ei)) # Includes trailing zeroes
 
                 # Compute the sum using a Cython loop.
                 tmp2 = fast_hgm_sum(w, mat_as_array, tmp, pe1, ei)
