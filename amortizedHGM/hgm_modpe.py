@@ -499,11 +499,12 @@ class AmortizingHypergeometricData(HypergeometricData):
             {37: 624, 47: 106}
         """
         e = self.e
-        if start == 0: # Need initial value modulo p**e for normalization.
-            ps1 = 0
-        else:
-            _, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
+        _, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
         _, ps = self.interval_mults[start]
+        if start == 0: 
+            # Need initial value modulo p**e for normalization.
+            # In the balanced case, we only need it modulo p.
+            ps1 = min(e-1, ps1)
         if ps1 >= e and ps >= e:
             return None
 
@@ -545,7 +546,11 @@ class AmortizingHypergeometricData(HypergeometricData):
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==0, we need to extract a normalization factor.
         if start == 0:
-            self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
+            if ei == e:
+                self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
+            else:
+                efac = factorial(ZZ(e-1))
+                self.zero_offsets[N] = {p: i[0]*multiplicative_lift(i[0], p, e, efac)%p**e for p, i in ans.items()}
         return ans
 
     def amortized_padic_H_values_ferry(self, t, start, pclass):
@@ -557,7 +562,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         - ``t`` -- a rational number, the parameter of the hypergeometric motive
         - ``start`` -- the left endpoint of an interval, `a/b` (one of the alpha or betas)
         - ``pclass`` -- an integer `c` between 0 and `b`, relatively prime to `b`
-
+i
         OUTPUT:
 
         The matrix T_i(p) from (5.22) of [CKR20], rescaled to be integral.
