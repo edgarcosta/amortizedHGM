@@ -29,16 +29,11 @@ cpdef truncated_log_mod(Integer x, int e, Integer m):
     r"""
     Compute log(x) truncated modulo (x**e, m). Assumes that x is a Sage integer.
     """
-    cdef int i
-    cdef Integer x1, tmp, mult
+    cdef Integer x1 = 1-x
+    cdef Integer mult = -x1
+    cdef Integer tmp = mult
 
-    if e == 2:
-        return x-1
-
-    x1 = 1-x
-    tmp = Integer(0)
-    mult = Integer(-1)
-    for i in range(1, e):
+    for i in range(2, e):
         mult *= x1
         tmp += moddiv_int(mult, Integer(i), m)
     return tmp
@@ -48,14 +43,10 @@ cpdef Integer truncated_exp_int(Integer x, int e):
     Compute (e-1)!*exp(x) truncated modulo x**e. Assumes that x is a Sage integer.
     """
     cdef int i
-    cdef Integer tmp, mult
+    cdef Integer mult = Integer(e-1)
+    cdef Integer tmp = x+mult
 
-    if e == 2:
-        return x+1
-
-    tmp = Integer(1)
-    mult = Integer(1)
-    for i in range(e-1, 0, -1):
+    for i in range(e-2, 0, -1):
         mult *= i
         tmp = tmp*x + mult
     return tmp
@@ -65,14 +56,10 @@ cpdef truncated_exp(x, int e):
     Compute (e-1)!*exp(x) truncated modulo x**e. Does not assume that x is a Sage integer.
     """
     cdef int i
-    cdef Integer mult
+    cdef Integer mult = Integer(e-1)
+    tmp = x+mult
 
-    if e == 2:
-        return x+1
-
-    tmp = 1
-    mult = Integer(1)
-    for i in range(e-1, 0, -1):
+    for i in range(e-2, 0, -1):
         mult *= i
         tmp = tmp*x + mult
     return tmp
@@ -98,17 +85,16 @@ cpdef multiplicative_lift(t, Integer p, int e, Integer efac, x):
 cdef long mbound_c_ints(long p, int start_num, int start_den, int end_num, int end_den):
     return max((end_num * (p-1)) // end_den - (start_num * (p-1)) // start_den, 1)
 
-cpdef dict mbound_dict_c(indices, Rational start, Rational end):
+cpdef mbound_dict_c(indices, Rational start, Rational end):
     """
     Return a dict keyed by primes `p` in `indices` computing a range of `k`
     used in the average polynomial time computation of the hypergeometric trace formula.
     """
     cdef int i, n, start_num, start_den, end_num, end_den
     cdef array.array l
-    start_num = start.numer()
-    start_den = start.denom()
-    end_num = end.numer()
-    end_den = end.denom()
+
+    start_num, start_den = start.as_integer_ratio()
+    end_num, end_den = end.as_integer_ratio()
     n = len(indices)
     l = array.array('l', [0]) * n
     for i in range(n):
@@ -122,6 +108,8 @@ cpdef dict prime_range_by_residues(a, b, dens, s):
     Assumes s is a set of primes to be excluded. This should include all primes dividing any
     of the moduli (given in dens).
     """
+    cdef Integer p
+
     prime_ranges = {}
     for d in dens:
         prime_ranges[d] = {}
@@ -134,7 +122,7 @@ cpdef dict prime_range_by_residues(a, b, dens, s):
                 prime_ranges[d][p % d].append(p)
     return prime_ranges
 
-cpdef list sign_flip(l, int e):
+cpdef sign_flip(l, int e):
     r"""
     Given a list l of length e of the coefficients of a polynomial f(x) in descending order,
     return the list corresponding to -f(-x).
@@ -147,7 +135,8 @@ cpdef int gamma_translate(l, Integer p, harmonics, int e,
     # Computes an inner loop in the computation of Gamma_p(x+c).
 
     cdef int i, j
-    
+    cdef Integer tmp
+
     p_powers = [p**(i+1) for i in range(e)]
 
     # Combine the expansion at 0 with the contribution from harmonic sums.
@@ -200,7 +189,7 @@ cpdef gamma_expansion_product(l, Integer p):
 
 cdef Integer eval_poly_as_gen(l, Integer x):
     r"""
-    Evaluate a polynomial specified by a generator of coefficients in descending order.
+    Evaluate a polynomial specified by a list of coefficients in descending order.
 
     This implements "Horner's rule" which long predates Horner.
     """
@@ -238,7 +227,8 @@ cpdef gammas_to_displacements(l, Integer p, t):
             # Adjust the logarithmic series expansion to account for integer shifts.
             # Beware that gammasum0 may be longer than e.
             p_powers = [p**(i+1) for i in range(etmp)]
-            gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2[index][etmp-1-i][0], tmp2[index][etmp-1-i][1], p_powers[i]) for i in range(etmp)]
+            tmp2i = tmp2[index]
+            gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2i[etmp-1-i][0], tmp2i[etmp-1-i][1], p_powers[i]) for i in range(etmp)]
 
             arg0 = Integer(0) if r==0 else p*(moddiv_int(-r, d, p) if etmp == 2 else moddiv_int(-r, d*(1-p), p_powers[-2]))
             if index == 0:
@@ -257,17 +247,16 @@ cpdef gammas_to_displacements(l, Integer p, t):
 cpdef Integer fast_hgm_sum(tuple w, array.array mat, ans, Integer pe1, int s):
     # Computes a sum in the innermost loop of the trace formula.
 
-    cdef int h1, h2, h3, i=0
+    cdef int h1, h3, i=0
     cdef Integer tmp = Integer(0), tmp2, tmp3
 
     for h3 in range(s):
         tmp2 = Integer(0)
+        tmp3 = Integer(0)
         for h1 in range(h3, s):
             tmp2 += Integer(w[h1])*mat[i]
             i += 1
-        tmp3 = Integer(0)
-        for h2 in range(h3, s):
-           tmp3 = tmp3*pe1 + Integer(ans[-1-h3,h2-h3])
+            tmp3 = tmp3*pe1 + Integer(ans[-1-h3,h1-h3])
         tmp += tmp2*tmp3
     return tmp
 

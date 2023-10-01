@@ -679,7 +679,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         OUTPUT:
 
         If ``ans`` is not provided, returns the output of a call to ``remainder_forest``,
-        which will be a dictionary keyed by primes with `e_i+1` by `2e_i` matrix values
+        which will be a dictionary keyed by primes with `e_i+1` by `e_i` matrix values
 
         EXAMPLES::
 
@@ -693,9 +693,9 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: len(vectors)
             159
             sage: vectors[997]
-            [878914      0      0      0]
-            [157867      0 693368      0]
-            [500805 119104  23517 693368]
+            [878914      0]
+            [157867      0]
+            [500805 119104]
         """
         d = start.denominator()
         r = start.numerator()*(pclass-1) % d
@@ -742,12 +742,14 @@ class AmortizingHypergeometricData(HypergeometricData):
                 V[-i,-i] = 1
 
         # Compute the amortized matrix product.
+        # We use cutoff to pick out the relevant columns of the product.
         indices = self._prime_range(t, N)[d][pclass]
         return remainder_forest(M,
                          lambda p, e=ei: p**ei,
                          mbound_dict_c(indices, start, end),
                          kbase=1, V=V,
-                         indices=indices, ans=ans, projective=True)
+                         indices=indices, ans=ans, projective=True,
+                         cutoff=None if ans else ei)
 
     def amortized_padic_H_values_interval(self, vectors, t, N, start, end, pclass, multlifts, debug=False):
         r"""
@@ -928,15 +930,11 @@ class AmortizingHypergeometricData(HypergeometricData):
                         self.amortized_padic_H_values_interval(vectors, t, N, start, end, pclass, multlifts, debug)
 
         # Extract results.
-        ans = []
         if e == 1 and chained:
-            for p, mat in vectors.items():
-                ans.append((p, moddiv_int(mat[1,0], mat[0,0], p)))
+            return {p: moddiv_int(mat[1,0], mat[0,0], p) for p, mat in vectors.items()}
         else:
             zero_offsets = self.zero_offsets[N]
-            for p, tmp in vectors.items():
-                ans.append((p, moddiv_int(tmp, (1-p)*zero_offsets[p], p**e)))
-        return dict(ans)
+            return {p: moddiv_int(tmp, (1-p)*zero_offsets[p], p**e) for p, tmp in vectors.items()}
 
     def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):
         # TODO: improve this (Edgar)
@@ -1109,7 +1107,6 @@ class AmortizingHypergeometricData(HypergeometricData):
                 magma.eval('foo := [HypergeometricTrace(H, %s, p) : p in ps];' % z)
                 print("Magma:     %.2f s" % (magma.Cputime(start_magma)))
                 bar = dict((p, k) for p,k in zip(sorted(foo), eval(magma.eval('foo;'))))
-                #            print([p for p in foo if p in bar and foo[p] % p**e != bar[p] % p**e])
                 assert all(foo[p] % p**e == bar[p] % p**e for p in foo if p in bar)
             if higher_powers_sage or higher_powers_magma:
                 s = set(self.wild_primes())

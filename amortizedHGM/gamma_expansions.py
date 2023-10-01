@@ -205,7 +205,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             # Use the Legendre relation if possible.
             c, _, f = self.cache[b-a, b, p]
             if f is None:
-                return c, -1, f
+                return c, -1, None
             # substitute x -> -x (and multiply by -1)
             e = self.e
             return c, -1, sign_flip(f, e)
