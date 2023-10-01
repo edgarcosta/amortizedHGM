@@ -1042,7 +1042,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         EXAMPLES::
 
             sage: H = AmortizingHypergeometricData(cyclotomic=([4,4,2,2], [3,3,3]))
-            sage: H.compare(14, 1337, vssage=False)
+            sage: H.compare(14, 1337, vssage=False) #random
             2^12
             Amortized Gamma: 0.26 s
             Additional precomputation: 0.05 s
@@ -1073,9 +1073,9 @@ class AmortizingHypergeometricData(HypergeometricData):
             # Don't worry about clearing caches for basic things like
             # truncated_starts_ends, _start_to_rationals, _numden_factors, gamma_denoms
             print("2^%s" % i)
-            if e>1 or not chained:
+            if e>1 or chained is False:
                 start = get_utime()
-                self.precompute_gammas(2**i, False if chained is None else chained)
+                self.precompute_gammas(2**i, chained=False)
                 print("Amortized Gamma: %.2f s" % (get_utime()-start))
                 if extra_cache:
                     start = get_utime()
