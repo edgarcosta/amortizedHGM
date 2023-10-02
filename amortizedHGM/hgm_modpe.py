@@ -142,11 +142,11 @@ class AmortizingHypergeometricData(HypergeometricData):
             HypergeometricData.__init__(self, cyclotomic, alpha_beta, gamma_list)
         alpha, beta = self.alpha(), self.beta()
         if 0 in alpha:
-           # The trace formula we are using breaks when alpha contains 0.
-           # We instead compute with alpha and beta swapped.
-           self.swap = AmortizingHypergeometricData(self.swap_alpha_beta(), e=e)
+            # The trace formula we are using breaks when alpha contains 0.
+            # We instead compute with alpha and beta swapped.
+            self.swap = AmortizingHypergeometricData(self.swap_alpha_beta(), e=e)
         else:
-           self.swap = None
+            self.swap = None
         self.denom = lcm(i for j in self.cyclotomic_data() for i in j)
 
         self.breaks = breaks = sorted(set(alpha + beta + [QQ(0), QQ(1)]))
@@ -165,7 +165,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Compute the sign and power of tau_i (at breakpoints) when p mod b == 1.
         self.break_mults_p1 = {}
         for brk in self.starts:
-            eta_m = self.zigzag(brk) + beta.count(brk) - self.alpha().count(brk)
+            eta_m = self.zigzag(brk) + beta.count(brk) - alpha.count(brk)
             xi_m = beta.count(0) - beta.count(brk)
             ps = eta_m + xi_m + self.D
             assert (ps >= 0)
@@ -571,7 +571,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         - ``t`` -- a rational number, the parameter of the hypergeometric motive
         - ``start`` -- the left endpoint of an interval, `a/b` (one of the alpha or betas)
         - ``pclass`` -- an integer `c` between 0 and `b`, relatively prime to `b`
-i
+
         OUTPUT:
 
         The matrix T_i(p) from (5.22) of [CKR20], rescaled to be integral.
