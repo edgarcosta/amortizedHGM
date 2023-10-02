@@ -197,8 +197,8 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: all(Zp(p)(a/b + 3*p, e).gamma() == c^i * Zp(p)(f(3*p), e).exp() for ((a,b,p),(c,i,f)) in cache.cache.items()) # FIXME
             True
         """
-        if abp in self.cache:
-            tmp = self.cache[abp]
+        tmp = self.cache.get(abp)
+        if tmp is not None:
             return tmp[0]*tmp[1], 1, tmp[2]
         a, b, p = abp
         try:
