@@ -286,7 +286,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         s = s.union(self.tame_primes(t))
         # Exclude other small primes to avoid edge cases.
         d = max(i.denominator() for i in self._alpha + self._beta)
-        lower_bound = d*(d-1)+1
+        lower_bound = max(self.e+1, d*(d-1)+1)
         return prime_range_by_residues(lower_bound, N, ds, s)
 
     @lazy_attribute
