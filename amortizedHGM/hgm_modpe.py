@@ -141,6 +141,8 @@ class AmortizingHypergeometricData(HypergeometricData):
         else:
             HypergeometricData.__init__(self, cyclotomic, alpha_beta, gamma_list)
         alpha, beta = self.alpha(), self.beta()
+        if 0 in alpha:
+           raise ValueError("0 not allowed in alpha, swap alpha and beta instead")
         self.denom = lcm(i for j in self.cyclotomic_data() for i in j)
 
         self.breaks = breaks = sorted(set(alpha + beta + [QQ(0), QQ(1)]))
@@ -159,8 +161,8 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Compute the sign and power of tau_i (at breakpoints) when p mod b == 1.
         self.break_mults_p1 = {}
         for brk in self.starts:
-            eta_m = self.zigzag(brk) + self.beta().count(brk) - self.alpha().count(brk)
-            xi_m = self.beta().count(0) - self.beta().count(brk)
+            eta_m = self.zigzag(brk) + beta.count(brk) - self.alpha().count(brk)
+            xi_m = beta.count(0) - beta.count(brk)
             ps = eta_m + xi_m + self.D
             assert (ps >= 0)
             sign = ZZ(-1) if eta_m%2 else ZZ(1)
