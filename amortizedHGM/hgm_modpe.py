@@ -142,7 +142,11 @@ class AmortizingHypergeometricData(HypergeometricData):
             HypergeometricData.__init__(self, cyclotomic, alpha_beta, gamma_list)
         alpha, beta = self.alpha(), self.beta()
         if 0 in alpha:
-           raise ValueError("0 not allowed in alpha, swap alpha and beta instead")
+           # The trace formula we are using breaks when alpha contains 0.
+           # We instead compute with alpha and beta swapped.
+           self.swap = AmortizingHypergeometricData(self.swap_alpha_beta(), e=e)
+        else:
+           self.swap = None
         self.denom = lcm(i for j in self.cyclotomic_data() for i in j)
 
         self.breaks = breaks = sorted(set(alpha + beta + [QQ(0), QQ(1)]))
@@ -900,6 +904,8 @@ i
             sage: traces[23] == H.padic_H_value(23, 1, t)
             True
         """
+        if self.swap is not None:
+            return self.swap.amortized_padic_H_values(1/t, N, chained, debug)
         e = self.e
         if chained is None: # Chained products only available for e=1, use them by default.
             chained = (e==1)
