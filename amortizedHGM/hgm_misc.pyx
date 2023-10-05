@@ -101,12 +101,12 @@ cpdef mbound_dict_c(indices, Rational start, Rational end):
         l[i] = mbound_c_ints(indices[i], start_num, start_den, end_num, end_den)
     return dict(zip(indices, l))
 
-cpdef dict prime_range_by_residues(a, b, dens, s):
+cpdef dict prime_range_by_residues(a, b, dens, m, s):
     r"""
     Sort the primes from a (inclusive) to b (exclusive) into residue classes.
 
     Assumes s is a set of primes to be excluded. This should include all primes dividing any
-    of the moduli (given in dens).
+    of the moduli (given in dens). We also exclude primes dividing m (without factoring m).
     """
     cdef Integer p
 
@@ -117,7 +117,7 @@ cpdef dict prime_range_by_residues(a, b, dens, s):
             if d.gcd(r) == 1:
                 prime_ranges[d][r] = []
     for p in prime_range(a, b):
-        if p not in s:
+        if p not in s and m%p:
             for d in dens:
                 prime_ranges[d][p % d].append(p)
     return prime_ranges

@@ -283,11 +283,12 @@ class AmortizingHypergeometricData(HypergeometricData):
         ds = set([elt.denominator() for elt in self.starts])
         ds.add(1)
         s = set(self.wild_primes())
-        s = s.union(self.tame_primes(t))
         # Exclude other small primes to avoid edge cases.
         d = max(i.denominator() for i in self._alpha + self._beta)
+        t = QQ(t)
+        m = t.numerator()*t.denominator()*(t-1).numerator()
         lower_bound = max(self.e+1, d*(d-1)+1)
-        return prime_range_by_residues(lower_bound, N, ds, s)
+        return prime_range_by_residues(lower_bound, N, ds, m, s)
 
     @lazy_attribute
     def _starts_to_rationals(self):
@@ -851,12 +852,12 @@ class AmortizingHypergeometricData(HypergeometricData):
                 tmp2 = moddiv_int(tmp2*tmp[-1,0], tmp[0,0], p)
             else:
                 pe = p**ei
-                pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
                 tpow = (t%pe).powermod(mip, pe) * multlifts[p](mip)
                 w = w.multiplication_trunc(multlifts[p], ei)
                 w = tuple(w[i] for i in range(ei)) # Includes trailing zeroes
 
                 # Compute the sum using a Cython loop.
+                pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
                 tmp2 = fast_hgm_sum(w, mat_as_array, tmp, pe1, ei)
                 tmp2 = moddiv_int(tpow*tmp2, de*tmp[0,0], pe)
 
@@ -941,17 +942,16 @@ class AmortizingHypergeometricData(HypergeometricData):
                         y, ps = self.interval_mults[start]
                         self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=Ti, ans=vectors)
                     else:
-                        # Update vectors with P_{m_i}.
+                        # Update vectors with P'_{m_i}.
                         self.amortized_padic_H_values_step(vectors, t, N, start, pclass, multlifts, debug)
-                        # Update vectors with P_{m_i+1}, ..., P_{m_{i+1}}.
+                        # Update vectors with P'_{m_i+1}, ..., P'_{m_{i+1}}.
                         self.amortized_padic_H_values_interval(vectors, t, N, start, end, pclass, multlifts, debug)
 
         # Extract results.
         if e == 1 and chained:
             return {p: moddiv_int(mat[1,0], mat[0,0], p) for p, mat in vectors.items()}
-        else:
-            zero_offsets = self.zero_offsets[N]
-            return {p: moddiv_int(tmp, (1-p)*zero_offsets[p], p**e) for p, tmp in vectors.items()}
+        zero_offsets = self.zero_offsets[N]
+        return {p: moddiv_int(tmp, (1-p)*zero_offsets[p], p**e) for p, tmp in vectors.items()}
 
     def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):
         # TODO: improve this (Edgar)
@@ -972,7 +972,6 @@ class AmortizingHypergeometricData(HypergeometricData):
             print("Created Magma hypergeometric data")
 
         wild_primes = set(H.wild_primes())
-        tame_primes = set(H.tame_primes(t))
 
         # Collect prime Frobenius traces.
         prime_traces = self.amortized_padic_H_values(t, N, chained=chained)
@@ -980,12 +979,13 @@ class AmortizingHypergeometricData(HypergeometricData):
             print("Computed prime Frobenius traces")
 
         # Collect prime power Frobenius traces.
-        s = wild_primes.union(tame_primes)
+        m = QQ(t).numerator()*QQ(t).denominator()*QQ(t-1).numerator()
         n = self.degree()
         tmp = []
+
         for q in range(N):
             p, f = ZZ(q).is_prime_power(get_data=True)
-            if f > 1 and f <= n and p not in s:
+            if f > 1 and f <= n and p not in wild_primes and m%p:
                 tmp.append((q,p,f))
         prime_power_traces = {q: self.padic_H_value(p=p,f=f,t=t) for (q,p,f) in tmp}
         if verbose:
@@ -996,9 +996,9 @@ class AmortizingHypergeometricData(HypergeometricData):
         T = P.gen()
         euler_factors = {}
         for p in prime_traces:
-            m = min(ceil(log(N,p)), n)
-            l = prime_traces[p]*T + sum(prime_power_traces[p**f]*T**f/f for f in range(2, m))
-            l = l + O(T**m)
+            mp = min(ceil(log(N,p)), n)
+            l = prime_traces[p]*T + sum(prime_power_traces[p**f]*T**f/f for f in range(2, mp))
+            l = l + O(T**mp)
             euler_factors[p] = exp(-l).polynomial()
         if verbose:
             print("Computed good Euler factors")
@@ -1127,12 +1127,12 @@ class AmortizingHypergeometricData(HypergeometricData):
                 assert all(foo[p] % p**e == bar[p] % p**e for p in foo if p in bar)
             if higher_powers_sage or higher_powers_magma:
                 s = set(self.wild_primes())
-                s = s.union(self.tame_primes(t))
+                m = QQ(t).numerator()*QQ(t).denominator()*QQ(t-1).numerator()
                 foo2 = []
                 n = self.degree()
                 for q in range(2**i):
                     p, f = ZZ(q).is_prime_power(get_data=True)
-                    if f > 1 and f <= n and p not in s:
+                    if f > 1 and f <= n and p not in s and m%p:
                         foo2.append((q,p,f))
             if higher_powers_sage:
                 start = get_utime()
