@@ -1,5 +1,16 @@
-__all__ = ["AmortizingHypergeometricData", "AccRemForest"]
-from .hgm import AmortizingHypergeometricData, AccRemForest
+from .hgm_modpe import AmortizingHypergeometricData
+
+__all__ = ["AmortizingHypergeometricData"]
+
+assert AmortizingHypergeometricData
+
+from .hgm import (
+    AccRemForest,
+    AmortizingHypergeometricData as AmortizingHypergeometricDatamodp,
+    compare as comparemodp,
+)
 
 assert AccRemForest
-assert AmortizingHypergeometricData
+assert AmortizingHypergeometricDatamodp
+assert comparemodp
+__all__ += ["AccRemForest", "AmortizingHypergeometricDatamodp", "comparemodp"]

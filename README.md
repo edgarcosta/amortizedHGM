@@ -2,30 +2,29 @@
 
 
 Sage code supporting
- - **Hypergeometric L-functions in average polynomial time** by Edgar Costa, Kiran Kedlaya and David Roe
+ - \[ [arXiv](https://arxiv.org/abs/2005.13640) [DOI](https://doi.org/https://doi.org/10.2140/obs.2020.4.143) \] **Hypergeometric L-functions in average polynomial time** by Edgar Costa, Kiran Kedlaya and David Roe
+ - [ tba ] **Hypergeometric L-functions in average polynomial time, II** by Edgar Costa, Kiran Kedlaya and David Roe
 
-Available at [arXiv:2005.13640](https://arxiv.org/abs/2005.13640)
- and appeared in the proceedings of the 2020 Algorithmic Number Theory Symposium
 
-Note: the previous version of the code was not a pip package, and can be found [here](https://github.com/edgarcosta/amortizedHGM/tree/arxiv/2005.13640).
+The previous version of the code was not a pip package, and can be found [here](https://github.com/edgarcosta/amortizedHGM/tree/arxiv/2005.13640).
 
 # Install
 
 ```
-sage -pip install --upgrade  git+https://github.com/edgarcosta/amortizedHGM.git@master
+sage -pip install --upgrade  git+https://github.com/edgarcosta/amortizedHGM.git@modpe
 ```
 
 If you don't have permissions to install it system wide, please add the flag ``--user`` to install it just for you.
 
 ```
-sage -pip install --upgrade  git+https://github.com/edgarcosta/amortizedHGM.git@master
+sage -pip install --user --upgrade git+https://github.com/edgarcosta/amortizedHGM.git@modpe
 ```
 
 
 # Example
 ```
-sage: from amortizedHGM import AmortizingHypergeometricData
-....: H = AmortizingHypergeometricData(10**2,   cyclotomic=([4,2,2], [3,3]))
+sage: from amortizedHGM import AmortizingHypergeometricDatamodp # the version of the first paper
+....: H = importAmortizingHypergeometricDatamodp(10**2,   cyclotomic=([4,2,2], [3,3]))
 ....: H.amortized_padic_H_values(1/5) # this uses the rforest library
 {11: 9,
  13: 9,
@@ -70,4 +69,14 @@ sage: from amortizedHGM import AmortizingHypergeometricData
  83: 2,
  89: 83,
  97: 6}
+sage: from amortizedHGM import AmortizingHypergeometricData # the version of the second paper
+sage: H = AmortizingHypergeometricData(cyclotomic=[[3,3],[2,1,1,1]])
+sage: H.weight()
+ 2
+sage: sage: H.compare(12, 314/159, vssage=True, vsmagma=False) # timings may vary
+ 2^12
+ Amortized Gamma: 0.09 s
+ Additional precomputation: 0.04 s
+ Amortized HG: 0.07 s
+ Sage:      18.23 s
  ```
