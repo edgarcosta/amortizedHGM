@@ -238,7 +238,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache = pAdicLogGammaCache(5)
             sage: cache.clear_cache()
             sage: cache.increase_N(20)
-            sage: harmonics, den, mat = cache._expansion0_prep()
+            sage: harmonics, den, mat, tmp = cache._expansion0_prep()
             sage: set(harmonics)
             {1, 2, 3}
             sage: set(harmonics[1])

@@ -828,6 +828,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         # Compute the amortized matrix product.
         ans = self.amortized_padic_H_values_matrix(t, N, ei, y, start, end, pclass)
+        mat = matrix(ZZ, 1, ei+1) # Temporary matrix to hold the quantities c_{i,h}(p)
 
         for p, tmp in ans.items(): #inner loop
             w = displacements[p][1]
@@ -845,10 +846,11 @@ class AmortizingHypergeometricData(HypergeometricData):
                 arg = moddiv_int(p*(d*mi+r), d if ei==2 else d*(1-p), pe) if r else mi*pe1
                 tpow = (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
-                w = tuple(w[i] for i in range(ei-1,-1,-1)) # Includes trailing zeroes
+                for i in range(ei):
+                    mat[0,-i-1] = w[i]
 
                 # Compute the sum using a Cython loop.
-                tmp2 = hgm_matmult(w, tmp, pe1, ei)
+                tmp2 = hgm_matmult(mat, tmp, pe1, ei)
                 tmp2 = moddiv_int(tpow*tmp2, tmp[0,-1], pe)
 
             if debug:

@@ -1,8 +1,8 @@
+from cpython cimport array
 from sage.rings.fast_arith cimport prime_range
 from sage.rings.integer cimport Integer
 from sage.rings.rational cimport Rational
 from sage.structure.element import parent
-from cpython cimport array
 
 # ******* 
 # Utility functions
@@ -252,16 +252,16 @@ cpdef gammas_to_displacements(l, Integer p, t):
                     gammaprodden*efac, p_powers[-i-1]) for i in range(e-1,-1,-1)], k1))
     return ans
 
-cpdef Integer hgm_matmult(tuple w, ans, Integer pe1, int s):
-    # Computes a sum in the innermost loop of the trace formula.
+cpdef Integer hgm_matmult(w, ans, Integer pe1, int s):
+    # Computes a matrix multiplication in the innermost loop of the trace formula.
 
     cdef int h1, h2
     cdef Integer tmp = Integer(0), tmp2, tmp3 = Integer(1)
 
     for h2 in range(s):
         tmp2 = Integer(0)
-        for h1 in range(s):
-            tmp2 += w[-1-h1]*ans[-1-h1,-1-h2]
+        for h1 in range(h2+1):
+            tmp2 += w[0,-1-h1]*ans[-1-h1,-1-h2]
         tmp += tmp2*tmp3
         if h2 < s-1:
             tmp3 *= pe1
