@@ -59,15 +59,16 @@ cpdef multiplicative_lift(t, Integer p, int e, x=Integer(1)):
     cdef int i
     cdef Integer pe = p**e
     cdef Integer tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
-    cdef Integer tmp2 = truncated_log_mod(tmp, e, pe)
-    tmp2 //= p
+    cdef Integer tmp2 = truncated_log_mod(tmp, e, pe).divide_knowing_divisible_by(p)
+    cdef Integer tmp4 = Integer(1)
 
     # Exponentiate to get the desired series.
     tmp3 = Integer(1)
-    tmp4 = Integer(1)
+    tmp5 = Integer(1)
     for i in range(1, e):
-        tmp4 = moddiv(tmp4*tmp2*x, Integer(i), p**(e-i))
-        tmp3 += tmp4
+        tmp4 = moddiv(tmp4*tmp2, Integer(i), p**(e-i))
+        tmp5 *= x
+        tmp3 += tmp4*tmp5
     return tmp3
 
 # *******
@@ -230,9 +231,9 @@ cpdef gammas_to_displacements(l, Integer p, t):
         else:
             # Adjust the logarithmic series expansion to account for integer shifts.
             # Beware that gammasum0 may be longer than e.
-            p_powers = [p**(i+1) for i in range(etmp)]
+            p_powers = [p**i for i in range(etmp+1)]
             tmp2i = tmp2[index]
-            gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2i[etmp-1-i][0], tmp2i[etmp-1-i][1], p_powers[i]) for i in range(etmp)]
+            gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2i[etmp-1-i][0], tmp2i[etmp-1-i][1], p_powers[i+1]) for i in range(etmp)]
 
             if index == 0:
                 arg0 = Integer(0) if r==0 else p*(moddiv_int(-r, d, p) if etmp == 2 else moddiv_int(-r, d*(1-p), p_powers[-2]))
@@ -246,10 +247,10 @@ cpdef gammas_to_displacements(l, Integer p, t):
                     tmp3 = eval_poly_as_gen_int(gammasum, arg0)
                     tmp1 += truncated_exp_int(tmp3, e)*pol
                     arg0 += p
+                x = pol.parent().gen()
                 ans.append(eval_poly_as_gen(
-                    [moddiv_int(tmp1[i].divide_knowing_divisible_by(p**i)*gammaprodnum,
-                    gammaprodden*efac, p_powers[-i-1]) for i in range(e-1,-1,-1)],
-                    pol.parent().gen()))
+                    [moddiv_int(tmp1[i].divide_knowing_divisible_by(p_powers[i])*gammaprodnum,
+                    gammaprodden*efac, p_powers[-i-1]) for i in range(e-1,-1,-1)], x))
     return ans
 
 cpdef Integer hgm_matmult(tuple w, ans, Integer pe1, int s):
