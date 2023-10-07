@@ -550,7 +550,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         inter_polys = interpolation_polys(ei, R1.gen())
         l = (tuple(t.as_integer_ratio() for t in tmp), tmp2, r, d, 
             ei1, 1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
-            ei, 1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys)
+            ei, 1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys, R1.gen())
 
         ans = {p: gammas_to_displacements(l, p, gamma_expansion_product(l0, p))
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
@@ -831,19 +831,20 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         for p, tmp in ans.items(): #inner loop
             w = displacements[p][1]
-            mip = (start*(p-1)).floor()+1
+            mi = (start*(p-1)).floor()
 
             # Update the precomputed series to include [z]^{mi+1}.
             if ei == 1:
-                tpow = (t%p).powermod(mip, p) # faster than power_mod(t, mi, p)
+                tpow = (t%p).powermod(mi+1, p) # faster than power_mod(t, mi, p)
 
                 tmp2 = tpow*w
                 tmp2 = moddiv_int(tmp2*tmp[-1,0], tmp[0,0], p)
             else:
                 pe = p**ei
-                tpow = (t%pe).powermod(mip, pe) * multlifts[p](moddiv_int(p*(d*mip+r-d),d*(1-p),pe))
+                arg = moddiv_int(p*(d*mi+r), d if ei==2 else d*(1-p), pe) if r else p*mi
+                tpow = (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
-                w = tuple(w[i] for i in range(ei)) # Includes trailing zeroes
+                w = tuple(w[i] for i in range(ei-1,-1,-1)) # Includes trailing zeroes
 
                 # Compute the sum using a Cython loop.
                 pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
@@ -853,8 +854,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             if debug:
                 # Verify that the sum, including the sign, is being computed correctly.
                 mi1 = (end*(p-1)).floor()
-                print("checking sum", start, p, mip, mi1, ps)
-                assert tmp2 == y*sum(self.verify_summand(p, t, m, ei) for m in range(mip,mi1))*self.zero_offsets[N][p]
+                print("checking sum", start, p, mi+1, mi1, ps)
+                assert tmp2 == y*sum(self.verify_summand(p, t, m, ei) for m in range(mi+1,mi1))*self.zero_offsets[N][p]
 
             # Include the variable power of p and accumulate the result.
             vectors[p] += tmp2 * p**ps

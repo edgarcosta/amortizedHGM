@@ -66,7 +66,7 @@ cpdef multiplicative_lift(t, Integer p, int e, x=Integer(1)):
     tmp3 = Integer(1)
     tmp5 = Integer(1)
     for i in range(1, e):
-        tmp4 = moddiv(tmp4*tmp2, Integer(i), p**(e-i))
+        tmp4 = moddiv_int(tmp4*tmp2, Integer(i), p**(e-i))
         tmp5 *= x
         tmp3 += tmp4*tmp5
     return tmp3
@@ -214,7 +214,7 @@ cpdef gammas_to_displacements(l, Integer p, t):
     num, den, gammasum0 = t
     
     # Import local variables from the calling scope. These do not depend on p.
-    tmp, tmp2, r, d, e1, e1fac, e, efac, inter_polys = l
+    tmp, tmp2, r, d, e1, e1fac, e, efac, inter_polys, k1 = l
     
     ans = []
 
@@ -241,27 +241,28 @@ cpdef gammas_to_displacements(l, Integer p, t):
                 ans.append(moddiv_int(gammaprodnum*truncated_exp_int(tmp3, e1), gammaprodden*e1fac, p_powers[-1]))
             else: # index == 1 and e > 1
                 # Compute the polynomial with coefficients c_{i,h}(p) by interpolation.
-                arg0 = Integer(0)
+                # This introduces a factor of (e-1)! to be removed at the next step.
                 tmp1 = 0
-                for pol in inter_polys:
-                    tmp3 = eval_poly_as_gen_int(gammasum, arg0)
-                    tmp1 += truncated_exp_int(tmp3, e)*pol
-                    arg0 += p
-                x = pol.parent().gen()
+                for i in range(e):
+                    tmp3 = eval_poly_as_gen_int(gammasum, i*p)
+                    tmp1 += truncated_exp_int(tmp3, e)*inter_polys[i]
+                # Remove formal powers of p and multiply by the carried constant.
                 ans.append(eval_poly_as_gen(
                     [moddiv_int(tmp1[i].divide_knowing_divisible_by(p_powers[i])*gammaprodnum,
-                    gammaprodden*efac, p_powers[-i-1]) for i in range(e-1,-1,-1)], x))
+                    gammaprodden*efac, p_powers[-i-1]) for i in range(e-1,-1,-1)], k1))
     return ans
 
 cpdef Integer hgm_matmult(tuple w, ans, Integer pe1, int s):
     # Computes a sum in the innermost loop of the trace formula.
 
     cdef int h1, h2
-    cdef Integer tmp = Integer(0), tmp3 = Integer(1)
+    cdef Integer tmp = Integer(0), tmp2, tmp3 = Integer(1)
 
     for h2 in range(s):
+        tmp2 = Integer(0)
         for h1 in range(s):
-            tmp += w[h1]*ans[-1-h1,-1-h2]*tmp3
+            tmp2 += w[-1-h1]*ans[-1-h1,-1-h2]
+        tmp += tmp2*tmp3
         if h2 < s-1:
             tmp3 *= pe1
     return tmp
