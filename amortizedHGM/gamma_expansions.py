@@ -361,8 +361,6 @@ class pAdicLogGammaCache(UniqueRepresentation):
                         self.cache.update(add_to_cache(b,d,p,f,None) for p,f in fac.items()) # inner loop
         else:
             zero_exp = self._expansion_at_0
-            R = ZZ['x']
-            x = R.gen()
             if d == 1:
                 self.cache.update({(0, 1, p): (minusone, -1, s) for p, s in zero_exp.items()})
             else:
