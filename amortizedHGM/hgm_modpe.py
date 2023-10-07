@@ -559,8 +559,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if ei1 == e:
                 self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
             else:
-                efac = factorial(ZZ(e-1))
-                self.zero_offsets[N] = {p: i[0]*multiplicative_lift(i[0], p, e, efac)%p**e for p, i in ans.items()}
+                self.zero_offsets[N] = {p: i[0]*multiplicative_lift(i[0], p, e)%p**e for p, i in ans.items()}
         return ans
 
     def amortized_padic_H_values_ferry(self, t, start, pclass):
@@ -631,7 +630,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: start = 3/5
             sage: P.<k1> = ZZ[]
             sage: vectors = defaultdict(ZZ)
-            sage: multlifts = {p: multiplicative_lift(t, p, e, 1, k1) for p in H._prime_range(t, N)[1][0]}
+            sage: multlifts = {p: multiplicative_lift(t, p, e, k1) for p in H._prime_range(t, N)[1][0]}
             sage: H.amortized_padic_H_values_step(vectors, t, N, start, 1, multlifts)
             sage: len(vectors)
             39
@@ -660,7 +659,8 @@ class AmortizingHypergeometricData(HypergeometricData):
                 tpow = (t%pe).powermod(mi, pe) # faster than power_mod(t, mi, p)
             else:
                 pe = p**ei1
-                tpow = (t%pe).powermod(mi, pe) * multlifts[p](mi)
+                pe1 = ZZ(p) if ei1==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
+                tpow = (t%pe).powermod(mi, pe) * multlifts[p](pe1*mi)
             tmp = tpow*displacements[p][0]%pe
             vectors[p] += tmp * y1*p**ps1
 
@@ -669,7 +669,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 assert tmp == self.verify_summand(p, t, mi, ei1)*self.zero_offsets[N][p]
 
     def amortized_padic_H_values_matrix(self, t, N, ei, y, start, end, pclass,
-                                        V=None, ans=None):
+                                        V=None, ans=None, chained=False):
         r"""
         Calls the rforest library to compute an amortized matrix product
         used for computing a part of the trace formula.
@@ -750,10 +750,9 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         # Prepend a matrix V to pick out the relevant rows of the product.
         # This saves a lot of overhead in the remainder forest calculation.
-        if V is None:
+        if not chained:
             V = matrix(ZZ, ei+1, 2*ei)
-            V[0,0] = 1
-            for i in range(1,ei+1):
+            for i in range(1,ei+2):
                 V[-i,-i] = 1
 
         # Compute the amortized matrix product.
@@ -764,7 +763,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                          mbound_dict_c(indices, start, end),
                          kbase=1, V=V,
                          indices=indices, ans=ans, projective=True,
-                         cutoff=None if ans else ei)
+                         cutoff=None if chained else ei)
 
     def amortized_padic_H_values_interval(self, vectors, t, N, start, end, pclass, multlifts, debug=False):
         r"""
@@ -807,7 +806,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: end = 3/5
             sage: P.<k1> = ZZ[]
             sage: vectors = defaultdict(ZZ)
-            sage: multlifts = {p: multiplicative_lift(t, p, e, 1, k1) for p in H._prime_range(t, N)[1][0]}
+            sage: multlifts = {p: multiplicative_lift(t, p, e, k1) for p in H._prime_range(t, N)[1][0]}
             sage: H.amortized_padic_H_values_interval(vectors, t, N, start, end, 1, multlifts)
             sage: len(vectors)
             159
@@ -842,14 +841,14 @@ class AmortizingHypergeometricData(HypergeometricData):
                 tmp2 = moddiv_int(tmp2*tmp[-1,0], tmp[0,0], p)
             else:
                 pe = p**ei
-                tpow = (t%pe).powermod(mip, pe) * multlifts[p](mip+moddiv_int(r-d,d,pe))
+                tpow = (t%pe).powermod(mip, pe) * multlifts[p](moddiv_int(p*(d*mip+r-d),d*(1-p),pe))
                 w = w.multiplication_trunc(multlifts[p], ei)
                 w = tuple(w[i] for i in range(ei)) # Includes trailing zeroes
 
                 # Compute the sum using a Cython loop.
                 pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
                 tmp2 = fast_hgm_sum(w, tmp, pe1, ei)
-                tmp2 = moddiv_int(tpow*tmp2, tmp[0,0], pe)
+                tmp2 = moddiv_int(tpow*tmp2, tmp[0,-1], pe)
 
             if debug:
                 # Verify that the sum, including the sign, is being computed correctly.
@@ -908,12 +907,14 @@ class AmortizingHypergeometricData(HypergeometricData):
         else:
             P = ZZ['k1']
             k1 = P.gen()
-            den = factorial(ZZ(e-1))
-            multlifts = {p: multiplicative_lift(t, p, e, den, k1) for p in self._prime_range(t, N)[1][0]}
+            multlifts = {p: multiplicative_lift(t, p, e, k1) for p in self._prime_range(t, N)[1][0]}
 
             if debug:
-                assert all(power_mod(t*multlifts[p](1),p**e-1,p**e) == 1 for p in self._prime_range(t, N)[1][0])
-                assert all(multlifts[p](1)%p == 1 for p in multlifts)
+                for p in multlifts:
+                    pe = p**e
+                    pe1 = ZZ(p) if e==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
+                    assert power_mod(t*multlifts[p](pe1),pe-1,pe) == 1
+                    assert multlifts[p](pe1)%p == 1
 
         tmp = identity_matrix(2) if chained else ZZ(0)
         vectors = {p: tmp for p in self._prime_range(t, N)[1][0]}
@@ -926,7 +927,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                         Ti = self.amortized_padic_H_values_ferry(t, start, pclass)
                         # Update vectors by multiplying by T_i*S_i(p).
                         y, ps = self.interval_mults[start]
-                        self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=Ti, ans=vectors)
+                        self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=Ti, ans=vectors, chained=True)
                     else:
                         # Update vectors with P'_{m_i}.
                         self.amortized_padic_H_values_step(vectors, t, N, start, pclass, multlifts, debug)

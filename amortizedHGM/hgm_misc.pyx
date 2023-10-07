@@ -51,32 +51,24 @@ cpdef Integer truncated_exp_int(Integer x, int e):
         tmp = tmp*x + mult
     return tmp
 
-cpdef truncated_exp(x, int e):
+cpdef multiplicative_lift(t, Integer p, int e, x=Integer(1)):
     r"""
-    Compute (e-1)!*exp(x) truncated modulo x**e. Does not assume that x is a Sage integer.
+    Compute a polynomial whose value at x is ([t]/t)**((1-p)*x) mod p**e, where [t] denotes the
+    p-adic multiplicative lift.
     """
     cdef int i
-    cdef Integer mult = Integer(e-1)
-    tmp = x+mult
-
-    for i in range(e-2, 0, -1):
-        mult *= i
-        tmp = tmp*x + mult
-    return tmp
-
-cpdef multiplicative_lift(t, Integer p, int e, Integer efac, x=Integer(1)):
-    r"""
-    Compute a polynomial whose value at x is ([t]/t)**x mod p**e, where [t] denotes the
-    p-adic multiplicative lift.
-
-    We assume that efac == factorial(e-1).
-    """
     cdef Integer pe = p**e
     cdef Integer tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
     cdef Integer tmp2 = truncated_log_mod(tmp, e, pe)
-    if e > 2:
-        tmp2 = moddiv_int(tmp2, 1-p, pe)
-    return moddiv(truncated_exp(tmp2*x, e), efac, pe)
+    tmp2 //= p
+
+    # Exponentiate to get the desired series.
+    tmp3 = Integer(1)
+    tmp4 = Integer(1)
+    for i in range(1, e):
+        tmp4 = moddiv(tmp4*tmp2*x, Integer(i), p**(e-i))
+        tmp3 += tmp4
+    return tmp3
 
 # *******
 # Functions used to accelerate certain inner loops.
@@ -188,7 +180,18 @@ cpdef gamma_expansion_product(l, Integer p):
     
     return num, den, gammasum
 
-cdef Integer eval_poly_as_gen(l, Integer x):
+cdef eval_poly_as_gen(l, x):
+    r"""
+    Evaluate a polynomial specified by a list of coefficients in descending order.
+
+    This implements "Horner's rule" which long predates Horner.
+    """
+    ans = 0
+    for i in l:
+        ans = ans*x + i
+    return ans
+
+cdef Integer eval_poly_as_gen_int(l, Integer x):
     r"""
     Evaluate a polynomial specified by a list of coefficients in descending order.
 
@@ -233,30 +236,34 @@ cpdef gammas_to_displacements(l, Integer p, t):
 
             if index == 0:
                 arg0 = Integer(0) if r==0 else p*(moddiv_int(-r, d, p) if etmp == 2 else moddiv_int(-r, d*(1-p), p_powers[-2]))
-                tmp3 = eval_poly_as_gen(gammasum, arg0) if arg0 else gammasum[-1]
+                tmp3 = eval_poly_as_gen_int(gammasum, arg0) if arg0 else gammasum[-1]
                 ans.append(moddiv_int(gammaprodnum*truncated_exp_int(tmp3, e1), gammaprodden*e1fac, p_powers[-1]))
             else: # index == 1 and e > 1
                 # Compute the polynomial with coefficients c_{i,h}(p) by interpolation.
                 arg0 = Integer(0)
-                p1 = p if e==2 else (p_powers[-1]-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
                 tmp1 = 0
                 for pol in inter_polys:
-                    tmp3 = eval_poly_as_gen(gammasum, arg0)
+                    tmp3 = eval_poly_as_gen_int(gammasum, arg0)
                     tmp1 += truncated_exp_int(tmp3, e)*pol
-                    arg0 += p1
-                ans.append(moddiv(tmp1*gammaprodnum, gammaprodden*efac, p_powers[-1]))
+                    arg0 += p
+                ans.append(eval_poly_as_gen(
+                    [moddiv_int(tmp1[i].divide_knowing_divisible_by(p**i)*gammaprodnum,
+                    gammaprodden*efac, p_powers[-i-1]) for i in range(e-1,-1,-1)],
+                    pol.parent().gen()))
     return ans
 
 cpdef Integer fast_hgm_sum(tuple w, ans, Integer pe1, int s):
     # Computes a sum in the innermost loop of the trace formula.
 
     cdef int h1, h2
-    cdef Integer tmp = Integer(0), tmp2
+    cdef Integer tmp = Integer(0), tmp2, tmp3 = Integer(1)
 
     for h1 in range(s):
         tmp2 = Integer(0)
         for h2 in range(h1, s):
             tmp2 = tmp2*pe1 + Integer(ans[-1-h1,h2-h1])
-        tmp += w[h1]*tmp2
+        tmp += w[h1]*tmp2*tmp3
+        if h1 < s-1:
+            tmp3 *= pe1
     return tmp
 
