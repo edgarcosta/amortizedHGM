@@ -231,33 +231,32 @@ cpdef gammas_to_displacements(l, Integer p, t):
             tmp2i = tmp2[index]
             gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2i[etmp-1-i][0], tmp2i[etmp-1-i][1], p_powers[i]) for i in range(etmp)]
 
-            arg0 = Integer(0) if r==0 else p*(moddiv_int(-r, d, p) if etmp == 2 else moddiv_int(-r, d*(1-p), p_powers[-2]))
             if index == 0:
+                arg0 = Integer(0) if r==0 else p*(moddiv_int(-r, d, p) if etmp == 2 else moddiv_int(-r, d*(1-p), p_powers[-2]))
                 tmp3 = eval_poly_as_gen(gammasum, arg0) if arg0 else gammasum[-1]
                 ans.append(moddiv_int(gammaprodnum*truncated_exp_int(tmp3, e1), gammaprodden*e1fac, p_powers[-1]))
             else: # index == 1 and e > 1
+                # Compute the polynomial with coefficients c_{i,h}(p) by interpolation.
+                arg0 = Integer(0)
                 p1 = p if e==2 else (p_powers[-1]-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
                 tmp1 = 0
                 for pol in inter_polys:
-                    arg0 += p1
                     tmp3 = eval_poly_as_gen(gammasum, arg0)
                     tmp1 += truncated_exp_int(tmp3, e)*pol
+                    arg0 += p1
                 ans.append(moddiv(tmp1*gammaprodnum, gammaprodden*efac, p_powers[-1]))
     return ans
 
-cpdef Integer fast_hgm_sum(tuple w, array.array mat, ans, Integer pe1, int s):
+cpdef Integer fast_hgm_sum(tuple w, ans, Integer pe1, int s):
     # Computes a sum in the innermost loop of the trace formula.
 
-    cdef int h1, h3, i=0
-    cdef Integer tmp = Integer(0), tmp2, tmp3
+    cdef int h1, h2
+    cdef Integer tmp = Integer(0), tmp2
 
-    for h3 in range(s):
+    for h1 in range(s):
         tmp2 = Integer(0)
-        tmp3 = Integer(0)
-        for h1 in range(h3, s):
-            tmp2 += Integer(w[h1])*mat[i]
-            i += 1
-            tmp3 = tmp3*pe1 + Integer(ans[-1-h3,h1-h3])
-        tmp += tmp2*tmp3
+        for h2 in range(h1, s):
+            tmp2 = tmp2*pe1 + Integer(ans[-1-h1,h2-h1])
+        tmp += w[h1]*tmp2
     return tmp
 

@@ -546,7 +546,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         
         d = start.denominator()
         r = start.numerator()*(pclass-1) % d
-        R1 = ZZ['k1'] # k1 stands for k-1
+        R1 = ZZ['k1'] # k1 stands for k-r/d
         inter_polys = interpolation_polys(ei, R1.gen())
         l = (tuple(t.as_integer_ratio() for t in tmp), tmp2, r, d, 
             ei1, 1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
@@ -824,16 +824,6 @@ class AmortizingHypergeometricData(HypergeometricData):
         d = start.denominator()
         r = start.numerator()*(pclass-1) % d
 
-        # Compute a matrix of values used in the inner loop.
-        de = ZZ(d**(ei-1))
-        mat = matrix(ZZ, [[binomial(h1,h3)*de*(r/d-1)**(h1-h3) for h3 in range(ei)] for h1 in range(ei)])
-        mat_as_array = array.array('l', [0] * (ei*(ei+1)//2))
-        i = 0
-        for h3 in range(ei):
-            for h1 in range(h3, ei):
-                mat_as_array[i] = mat[h1, h3]
-                i += 1
-
         # Retrieve precomputed values.
         displacements = self.displacements(N, start, pclass)
 
@@ -852,20 +842,16 @@ class AmortizingHypergeometricData(HypergeometricData):
                 tmp2 = moddiv_int(tmp2*tmp[-1,0], tmp[0,0], p)
             else:
                 pe = p**ei
-                tpow = (t%pe).powermod(mip, pe) * multlifts[p](mip)
+                tpow = (t%pe).powermod(mip, pe) * multlifts[p](mip+moddiv_int(r-d,d,pe))
                 w = w.multiplication_trunc(multlifts[p], ei)
                 w = tuple(w[i] for i in range(ei)) # Includes trailing zeroes
 
                 # Compute the sum using a Cython loop.
                 pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
-                tmp2 = fast_hgm_sum(w, mat_as_array, tmp, pe1, ei)
-                tmp2 = moddiv_int(tpow*tmp2, de*tmp[0,0], pe)
+                tmp2 = fast_hgm_sum(w, tmp, pe1, ei)
+                tmp2 = moddiv_int(tpow*tmp2, tmp[0,0], pe)
 
             if debug:
-                # Verify the computed value of w(0).
-                print("checking w", start, p, mip, ps)
-                assert tpow*(w if ei==1 else w[0]) == self.verify_summand(p, t, mip, ei)*self.zero_offsets[N][p]
-
                 # Verify that the sum, including the sign, is being computed correctly.
                 mi1 = (end*(p-1)).floor()
                 print("checking sum", start, p, mip, mi1, ps)
