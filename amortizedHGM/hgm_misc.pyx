@@ -252,18 +252,16 @@ cpdef gammas_to_displacements(l, Integer p, t):
                     pol.parent().gen()))
     return ans
 
-cpdef Integer fast_hgm_sum(tuple w, ans, Integer pe1, int s):
+cpdef Integer hgm_matmult(tuple w, ans, Integer pe1, int s):
     # Computes a sum in the innermost loop of the trace formula.
 
     cdef int h1, h2
-    cdef Integer tmp = Integer(0), tmp2, tmp3 = Integer(1)
+    cdef Integer tmp = Integer(0), tmp3 = Integer(1)
 
-    for h1 in range(s):
-        tmp2 = Integer(0)
-        for h2 in range(h1, s):
-            tmp2 = tmp2*pe1 + Integer(ans[-1-h1,h2-h1])
-        tmp += w[h1]*tmp2*tmp3
-        if h1 < s-1:
+    for h2 in range(s):
+        for h1 in range(s):
+            tmp += w[h1]*ans[-1-h1,-1-h2]*tmp3
+        if h2 < s-1:
             tmp3 *= pe1
     return tmp
 

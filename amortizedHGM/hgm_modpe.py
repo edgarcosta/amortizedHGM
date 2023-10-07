@@ -30,9 +30,9 @@ from .gamma_expansions import (
     pAdicLogGammaCache,
 )
 from .hgm_misc import (
-    fast_hgm_sum,
     gamma_expansion_product,
     gammas_to_displacements,
+    hgm_matmult,
     mbound_dict_c,
     moddiv_int,
     multiplicative_lift,
@@ -847,7 +847,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
                 # Compute the sum using a Cython loop.
                 pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
-                tmp2 = fast_hgm_sum(w, tmp, pe1, ei)
+                tmp2 = hgm_matmult(w, tmp, pe1, ei)
                 tmp2 = moddiv_int(tpow*tmp2, tmp[0,-1], pe)
 
             if debug:
