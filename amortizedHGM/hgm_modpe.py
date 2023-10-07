@@ -841,13 +841,13 @@ class AmortizingHypergeometricData(HypergeometricData):
                 tmp2 = moddiv_int(tmp2*tmp[-1,0], tmp[0,0], p)
             else:
                 pe = p**ei
-                arg = moddiv_int(p*(d*mi+r), d if ei==2 else d*(1-p), pe) if r else p*mi
+                pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
+                arg = moddiv_int(p*(d*mi+r), d if ei==2 else d*(1-p), pe) if r else mi*pe1
                 tpow = (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
                 w = tuple(w[i] for i in range(ei-1,-1,-1)) # Includes trailing zeroes
 
                 # Compute the sum using a Cython loop.
-                pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
                 tmp2 = hgm_matmult(w, tmp, pe1, ei)
                 tmp2 = moddiv_int(tpow*tmp2, tmp[0,-1], pe)
 
