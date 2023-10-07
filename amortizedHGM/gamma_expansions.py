@@ -63,10 +63,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
             Nold = self.N
             self.N = N
             if self.e > 1:
-                harmonics, den, mat = self._expansion0_prep()
+                harmonics, den, mat, tmp = self._expansion0_prep()
                 E0 = self._expansion_at_0
                 for p in prime_range(Nold, N):
-                    E0[p] = self._expansion0(p, harmonics, den, mat)
+                    E0[p] = self._expansion0(p, harmonics, den, mat, tmp)
 
     def clear_cache(self):
         """
@@ -230,6 +230,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         - ``den`` -- the factorial of e-1
         - ``mat`` -- a lower triangular (e-1)x(e-1) matrix of binomial coefficients,
           with (i,j) entry equal to (e-1)! times the entry of the matrix inverse of binomial(i+1, j)
+        - ``tmp`` -- a 1x(e-1) matrix of integers, initially 0
 
         EXAMPLES::
 
@@ -268,9 +269,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
         mat0 = matrix(ZZ, [[binomial(i+1, j) if i>=j else 0 for j in range(e-1)] for i in range(e-1)])
         den = factorial(ZZ(e-1))
         mat = (~mat0*den).change_ring(ZZ)
-        return harmonics, den, mat
+        tmp = matrix(ZZ, 1, e-1)
+        return harmonics, den, mat, tmp
 
-    def _expansion0(self, p, harmonics, den, mat):
+    def _expansion0(self, p, harmonics, den, mat, tmp):
         """
         A helper function for ``_expansion_at_0`` that computes the expansion of Gamma_p(x) at 0
         without caching.
@@ -281,8 +283,8 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache = pAdicLogGammaCache(5)
             sage: cache.clear_cache()
             sage: cache.increase_N(20)
-            sage: harmonics, den, mat = cache._expansion0_prep()
-            sage: cache._expansion0(17, harmonics, den, mat)
+            sage: harmonics, den, mat, tmp = cache._expansion0_prep()
+            sage: cache._expansion0(17, harmonics, den, mat, tmp)
             [0, 72500, 0, 230, 0]
             sage: Zp(17)(3*17,5).gamma()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
@@ -291,8 +293,9 @@ class pAdicLogGammaCache(UniqueRepresentation):
         """
         e = self.e
         pe = [p**(i+1) for i in range(e)]
-        logfac = truncated_log_mod(-harmonics[1][p][0,1], e, pe[-1]) # = log -(p-1)!
-        tmp = matrix(ZZ, 1, e-1, [logfac] + [(-1 if j%2 else 1)*pe[j-1]*moddiv_int(-harmonics[j][p][0,0], j*harmonics[j][p][0,1], pe[e-j-1]) for j in range(1,e-1)])
+        tmp[0,0] = truncated_log_mod(-harmonics[1][p][0,1], e, pe[-1]) # = log -(p-1)!
+        for j in range(1, e-1):
+            tmp[0, j] = (-1 if j%2 else 1)*pe[j-1]*moddiv_int(-harmonics[j][p][0,0], j*harmonics[j][p][0,1], pe[e-j-1])
         tmp *= mat
         return [moddiv_int(tmp[0,i].divide_knowing_divisible_by(pe[i]), den, pe[-1-i]) for i in range(e-2,-1,-1)] + [0]
 
@@ -320,8 +323,8 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: Zp(17)(72500*(3*17) + 230*(3*17)^3, 4).exp()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
-        harmonics, den, mat = self._expansion0_prep()
-        return {p: self._expansion0(p, harmonics, den, mat) for p in prime_range(self.e+1, self.N)}
+        harmonics, den, mat, tmp = self._expansion0_prep()
+        return {p: self._expansion0(p, harmonics, den, mat, tmp) for p in prime_range(self.e+1, self.N)}
 
     def _set_expansion_at_offset(self, d, normalized=False):
         """
