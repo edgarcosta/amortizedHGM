@@ -36,6 +36,7 @@ from .hgm_misc import (
     mbound_dict_c,
     moddiv_int,
     multiplicative_lift,
+    p_over_1_minus_p,
     prime_range_by_residues
 )
 
@@ -560,7 +561,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if ei1 == e:
                 self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
             else:
-                self.zero_offsets[N] = {p: i[0]*multiplicative_lift(i[0], p, e, ZZ(p) if ei1==2 else (p**e-p).divide_knowing_divisible_by(p-1))%p**e for p, i in ans.items()}
+                self.zero_offsets[N] = {p: i[0]*multiplicative_lift(i[0], p, e, p_over_1_minus_p(p, e))%p**e for p, i in ans.items()}
         return ans
 
     def amortized_padic_H_values_ferry(self, t, start, pclass):
@@ -660,8 +661,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 tpow = (t%pe).powermod(mi, pe) # faster than power_mod(t, mi, p)
             else:
                 pe = p**ei1
-                pe1 = ZZ(p) if ei1==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
-                tpow = (t%pe).powermod(mi, pe) * multlifts[p](pe1*mi)
+                tpow = (t%pe).powermod(mi, pe) * multlifts[p](p_over_1_minus_p(p, e)*mi)
             tmp = tpow*displacements[p][0]%pe
             vectors[p] += tmp * y1*p**ps1
 
@@ -841,7 +841,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 tmp2 = moddiv_int(tpow*w*tmp[-1,0], tmp[0,0], p)
             else:
                 pe = p**ei
-                pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
+                pe1 = p_over_1_minus_p(p, ei)
                 arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, d*(1-p), p**(ei-1)))
                 tpow = (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
@@ -913,7 +913,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if debug:
                 for p in multlifts:
                     pe = p**e
-                    pe1 = ZZ(p) if e==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
+                    pe1 = p_over_1_minus_p(p, e) # reduces to p/(1-p) mod pe
                     assert power_mod(t*multlifts[p](pe1),pe-1,pe) == 1
                     assert multlifts[p](pe1)%p == 1
 

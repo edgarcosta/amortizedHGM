@@ -19,6 +19,14 @@ cpdef powers_list(Integer p, int e):
         l.append(l[-1]*p)
     return l
 
+cpdef p_over_1_minus_p(Integer p, int e):
+    r"""
+    Compute the reduction of p/(1-p) mod p**e.
+    """
+    if e == 2:
+       return p
+    return (p**e-p).divide_knowing_divisible_by(p-1)
+
 cpdef Integer moddiv_int(Integer a, Integer b, Integer m):
     r"""
     Compute x with |x| <= m/2 and x == a/b mod m. All of a, b, and m must be Sage integers.
