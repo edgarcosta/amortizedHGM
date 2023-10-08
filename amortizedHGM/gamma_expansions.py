@@ -355,7 +355,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         one, minusone = ZZ(1), ZZ(-1)
         if e == 1:
             if d == 1:
-                self.cache.update({(0, 1, p): (minusone, -1, None) for p in prime_range(3, n)})
+                self.cache.update(((0, 1, p), (minusone, -1, None)) for p in prime_range(3, n))
             else:
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
@@ -364,7 +364,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         else:
             zero_exp = self._expansion_at_0
             if d == 1:
-                self.cache.update({(0, 1, p): (minusone, -1, s) for p, s in zero_exp.items()})
+                self.cache.update(((0, 1, p), (minusone, -1, s)) for p, s in zero_exp.items())
             else:
                 Z1 = ZZ(1)
                 for b in srange(1, d//2+1):
