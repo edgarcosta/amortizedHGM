@@ -8,6 +8,17 @@ from sage.structure.element import parent
 # Utility functions
 # *******
 
+cpdef powers_list(Integer p, int e):
+    r"""
+    Compute [p, p**2, ..., p**e].
+    """
+    cdef int i
+
+    l = [p]
+    for i in range(e-1):
+        l.append(l[-1]*p)
+    return l
+
 cpdef Integer moddiv_int(Integer a, Integer b, Integer m):
     r"""
     Compute x with |x| <= m/2 and x == a/b mod m. All of a, b, and m must be Sage integers.
@@ -126,12 +137,16 @@ cpdef sign_flip(l, int e):
 cpdef gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, tmp):
     cdef int i
 
-    pe = [p**(i+1) for i in range(e)]
-    tmp[0,0] = truncated_log_mod(-harmonics[1][p][0,1], e, pe[-1]) # = log -(p-1)!
+    p_powers = powers_list(p, e)
+
+    # Compute the finite difference of the expansion of log Gamma_p(py).
+    tmp[0,0] = truncated_log_mod(-harmonics[1][p][0,1], e, p_powers[-1]) # = log -(p-1)!
     for i in range(1, e-1):
-        tmp[0, i] = (-1 if i%2 else 1)*pe[i-1]*moddiv_int(-harmonics[i][p][0,0], i*harmonics[i][p][0,1], pe[e-i-1])
+        tmp[0, i] = (-1 if i%2 else 1)*p_powers[i-1]*moddiv_int(-harmonics[i][p][0,0], i*harmonics[i][p][0,1], p_powers[e-i-1])
+
+    # Use a matrix multiplication to invert the difference operator.
     tmp *= mat
-    return [moddiv_int(tmp[0,i].divide_knowing_divisible_by(pe[i]), den, pe[-1-i]) for i in range(e-2,-1,-1)] + [0]
+    return [moddiv_int(tmp[0,i].divide_knowing_divisible_by(p_powers[i]), den, p_powers[-1-i]) for i in range(e-2,-1,-1)] + [0]
 
 cpdef gamma_translate(s, Integer p, harmonics, int e,
                       Integer b, Integer d, int normalized):
@@ -140,7 +155,7 @@ cpdef gamma_translate(s, Integer p, harmonics, int e,
     cdef int i, j
     cdef Integer tmp
 
-    p_powers = [p**(i+1) for i in range(e)]
+    p_powers = powers_list(p, e)
 
     # Note that s starts out representing the *reversed* expansion at 0.
     # We combine it with the contribution from harmonic sums.
@@ -149,9 +164,10 @@ cpdef gamma_translate(s, Integer p, harmonics, int e,
 
     # Recenter the log expansion.
     tmp = p*moddiv_int(-b, d, p_powers[e-2])
+    tmpmod = [0] + [tmp%p_powers[j] for j in range(1, e-1)] + [tmp]
     for i in range(1, e):
         for j in range(i, 0, -1):
-            l[j] += l[j-1]*tmp
+            l[j] += l[j-1]*tmpmod[j]
     if normalized:
         for i in range(e-1):
             l[i] = l[i]%p_powers[i]
@@ -159,7 +175,6 @@ cpdef gamma_translate(s, Integer p, harmonics, int e,
     else:
         for i in range(e):
             l[i] = l[i]%p_powers[i]
-
     return l
 
 cpdef gamma_expansion_product(l, Integer p):
@@ -242,7 +257,7 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, t, tmp, l):
         else:
             # Adjust the logarithmic series expansion to account for integer shifts.
             # Beware that gammasum0 may be longer than e.
-            p_powers = [p**i for i in range(etmp+1)]
+            p_powers = [Integer(1)] + powers_list(p, etmp)
             tmp2i = tmp2[index]
             gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2i[etmp-1-i][0], tmp2i[etmp-1-i][1], p_powers[i+1]) for i in range(etmp)]
 

@@ -16,6 +16,7 @@ from .hgm_misc import (
     gamma_expansion_at_0,
     gamma_translate,
     moddiv_int,
+    powers_list,
     sign_flip,
     truncated_log_mod,
 )
@@ -158,7 +159,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             peD = {}
             for (a, b, p), (c, d, f) in cache.items():
                 if p not in peD:
-                    peD[p] = [p**(i+1) for i in range(e)]
+                    peD[p] = powers_list(p, e)
                 pe = peD[p]
                 c = c % pe[-1]
                 f = [f[i] % pe[i] for i in range(e)]
