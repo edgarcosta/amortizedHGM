@@ -204,17 +204,18 @@ cdef Integer eval_poly_as_gen_int(l, Integer x):
         ans = ans*x + i
     return ans
 
-cpdef gammas_to_displacements(l, Integer p, t):
+cpdef gammas_to_displacements(Integer p, int e1, int e, t, tmp, l):
     # Computes an inner loop in the computation of P_{m_i} and P_{m_i+1}.
     # Assumes t is the output of gamma_expansion_product.
 
-    cdef int i, j, j0, j1, etmp, e1, e1fac, e, efac, index
+    cdef int i, j, j0, j1, etmp, e1fac, efac, index
     cdef Integer r, d, p1, arg0, gammaprodnum, gammaprodden, num, den, tmp3
 
     num, den, gammasum0 = t
     
     # Import local variables from the calling scope. These do not depend on p.
-    tmp, tmp2, r, d, e1, e1fac, e, efac, inter_polys, k1 = l
+    if l is not None:
+        tmp2, r, d, e1fac, efac, inter_polys, k1 = l
     
     ans = []
 

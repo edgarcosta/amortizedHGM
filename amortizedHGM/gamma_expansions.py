@@ -199,7 +199,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         """
         tmp = self.cache.get(abp)
         if tmp is not None:
-            return tmp[0]*tmp[1], 1, tmp[2]
+            return (-tmp[0] if tmp[1]<0 else tmp[0]), 1, tmp[2]
         a, b, p = abp
         try:
             # Use the Legendre relation if possible.
@@ -207,8 +207,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             if f is None:
                 return c, -1, None
             # substitute x -> -x (and multiply by -1)
-            e = self.e
-            return c, -1, sign_flip(f, e)
+            return c, -1, sign_flip(f, self.e)
         except KeyError:
             if p <= self.e:
                 raise ValueError(f"Cache does not support primes smaller than {self.e+1}")

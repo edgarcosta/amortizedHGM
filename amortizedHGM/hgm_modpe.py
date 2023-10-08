@@ -548,11 +548,12 @@ class AmortizingHypergeometricData(HypergeometricData):
         r = start.numerator()*(pclass-1) % d
         R1 = ZZ['k1'] # k1 stands for k-r/d
         inter_polys = interpolation_polys(ei, R1.gen())
-        l = (tuple(t.as_integer_ratio() for t in tmp), tmp2, r, d, 
-            ei1, 1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
-            ei, 1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys, R1.gen())
+        tmp = tuple(t.as_integer_ratio() for t in tmp) 
+        l = None if max(ei1, ei) <= 1 else (tmp2, r, d, 
+            1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
+            1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys, R1.gen())
 
-        ans = {p: gammas_to_displacements(l, p, gamma_expansion_product(l0, p))
+        ans = {p: gammas_to_displacements(p, ei1, ei, gamma_expansion_product(l0, p), tmp, l)
                     for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==0, we need to extract a normalization factor.
         if start == 0:
