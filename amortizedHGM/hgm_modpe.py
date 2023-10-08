@@ -560,7 +560,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if ei1 == e:
                 self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
             else:
-                self.zero_offsets[N] = {p: i[0]*multiplicative_lift(i[0], p, e)%p**e for p, i in ans.items()}
+                self.zero_offsets[N] = {p: i[0]*multiplicative_lift(i[0], p, e, ZZ(p) if ei1==2 else (p**e-p).divide_knowing_divisible_by(p-1))%p**e for p, i in ans.items()}
         return ans
 
     def amortized_padic_H_values_ferry(self, t, start, pclass):
