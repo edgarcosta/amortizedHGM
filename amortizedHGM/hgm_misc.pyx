@@ -25,7 +25,7 @@ cdef moddiv(a, Integer b, Integer m):
     """
     return a*b.inverse_mod(m)%m
 
-cpdef truncated_log_mod(Integer x, int e, Integer m):
+cpdef Integer truncated_log_mod(Integer x, int e, Integer m):
     r"""
     Compute log(x) truncated modulo (x**e, m). Assumes that x is a Sage integer.
     """
@@ -60,12 +60,12 @@ cpdef multiplicative_lift(t, Integer p, int e, x=Integer(1)):
     cdef Integer pe = p**e
     cdef Integer tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
     cdef Integer tmp2 = truncated_log_mod(tmp, e, pe).divide_knowing_divisible_by(p)
-    cdef Integer tmp4 = Integer(1)
+    cdef Integer tmp4 = tmp2
 
     # Exponentiate to get the desired series.
-    tmp3 = Integer(1)
-    tmp5 = Integer(1)
-    for i in range(1, e):
+    tmp3 = Integer(1)+tmp2*x
+    tmp5 = x
+    for i in range(2, e):
         tmp4 = moddiv_int(tmp4*tmp2, Integer(i), p**(e-i))
         tmp5 *= x
         tmp3 += tmp4*tmp5
@@ -174,7 +174,7 @@ cpdef gamma_expansion_product(l, Integer p):
 
     num = Integer(1)
     den = Integer(1)
-    gammasum = [0 for i in range(e)]
+    gammasum = None if e==1 else [0 for i in range(e)]
     
     for (inum,iden),j in flgl.items(): # i = inum/iden
         # if e=1, then tmp1=1 and is unused
