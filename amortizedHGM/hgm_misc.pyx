@@ -123,6 +123,16 @@ cpdef sign_flip(l, int e):
     cdef int j
     return [l[j] if (e-j)%2 else -l[j] for j in range(e)]
 
+cpdef gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, tmp):
+    cdef int i
+
+    pe = [p**(i+1) for i in range(e)]
+    tmp[0,0] = truncated_log_mod(-harmonics[1][p][0,1], e, pe[-1]) # = log -(p-1)!
+    for i in range(1, e-1):
+        tmp[0, i] = (-1 if i%2 else 1)*pe[i-1]*moddiv_int(-harmonics[i][p][0,0], i*harmonics[i][p][0,1], pe[e-i-1])
+    tmp *= mat
+    return [moddiv_int(tmp[0,i].divide_knowing_divisible_by(pe[i]), den, pe[-1-i]) for i in range(e-2,-1,-1)] + [0]
+
 cpdef gamma_translate(s, Integer p, harmonics, int e,
                       Integer b, Integer d, int normalized):
     # Computes an inner loop in the computation of Gamma_p(x+c).

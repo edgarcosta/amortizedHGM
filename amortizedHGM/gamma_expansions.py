@@ -13,6 +13,7 @@ from sage.matrix.constructor import matrix
 
 from pyrforest import batch_harmonic, batch_factorial
 from .hgm_misc import (
+    gamma_expansion_at_0,
     gamma_translate,
     moddiv_int,
     sign_flip,
@@ -290,13 +291,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: Zp(17)(72500*(3*17) + 230*(3*17)^3, 4).exp()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
-        e = self.e
-        pe = [p**(i+1) for i in range(e)]
-        tmp[0,0] = truncated_log_mod(-harmonics[1][p][0,1], e, pe[-1]) # = log -(p-1)!
-        for j in range(1, e-1):
-            tmp[0, j] = (-1 if j%2 else 1)*pe[j-1]*moddiv_int(-harmonics[j][p][0,0], j*harmonics[j][p][0,1], pe[e-j-1])
-        tmp *= mat
-        return [moddiv_int(tmp[0,i].divide_knowing_divisible_by(pe[i]), den, pe[-1-i]) for i in range(e-2,-1,-1)] + [0]
+        return gamma_expansion_at_0(p, self.e, harmonics, den, mat, tmp)
 
     @lazy_attribute
     def _expansion_at_0(self):

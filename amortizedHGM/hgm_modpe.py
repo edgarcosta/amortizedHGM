@@ -838,21 +838,18 @@ class AmortizingHypergeometricData(HypergeometricData):
             # Update the precomputed series to include [z]^{mi+1}.
             if ei == 1:
                 tpow = (t%p).powermod(mi+1, p) # faster than power_mod(t, mi, p)
-
-                tmp2 = tpow*w
-                tmp2 = moddiv_int(tmp2*tmp[-1,0], tmp[0,0], p)
+                tmp2 = moddiv_int(tpow*w*tmp[-1,0], tmp[0,0], p)
             else:
                 pe = p**ei
                 pe1 = ZZ(p) if ei==2 else (pe-p).divide_knowing_divisible_by(p-1) # reduces to p/(1-p) mod pe
-                arg = moddiv_int(p*(d*mi+r), d if ei==2 else d*(1-p), pe) if r else mi*pe1
+                arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, d*(1-p), p**(ei-1)))
                 tpow = (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
+
+                # Compute the sum using a matrix multiplication implemented directly in Cython.
                 for i in range(ei):
                     mat[0,-i-1] = w[i]
-
-                # Compute the sum using a Cython loop.
-                tmp2 = hgm_matmult(mat, tmp, pe1, ei)
-                tmp2 = moddiv_int(tpow*tmp2, tmp[0,-1], pe)
+                tmp2 = moddiv_int(tpow*hgm_matmult(mat, tmp, pe1, ei), tmp[0,-1], pe)
 
             if debug:
                 # Verify that the sum, including the sign, is being computed correctly.
