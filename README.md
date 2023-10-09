@@ -8,6 +8,8 @@ Sage code supporting
 
 The previous version of the code was not a pip package, and can be found [here](https://github.com/edgarcosta/amortizedHGM/tree/arxiv/2005.13640).
 
+This code depends on [pyrforest](https://github.com/edgarcosta/pyrforest).
+
 # Install
 
 ```
@@ -19,7 +21,6 @@ If you don't have permissions to install it system wide, please add the flag ``-
 ```
 sage -pip install --user --upgrade git+https://github.com/edgarcosta/amortizedHGM.git@modpe
 ```
-
 
 # Example
 ```
