@@ -543,19 +543,22 @@ class AmortizingHypergeometricData(HypergeometricData):
         gammas = self.gammas_cache
         ei1 = e-ps1
         ei = e-ps
-        l0 = (gammas, flgl, max(ei1, ei))
+        eimax = max(ei1, ei)
+        gammasum = None if eimax==1 else [0 for i in range(eimax)]
+        l0 = (gammas, flgl, gammasum)
         
         d = start.denominator()
         r = start.numerator()*(pclass-1) % d
         R1 = ZZ['k1'] # k1 stands for k-r/d
         inter_polys = interpolation_polys(ei, R1.gen())
-        tmp = tuple(t.as_integer_ratio() for t in tmp) 
+        tmp = tuple(t.as_integer_ratio() for t in tmp)
         l = None if max(ei1, ei) <= 1 else (tmp2, r, d, 
             1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
             1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys, R1.gen())
 
-        ans = {p: gammas_to_displacements(p, ei1, ei, gamma_expansion_product(l0, p), tmp, l)
-                    for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
+        ans = {p: gammas_to_displacements(p, ei1, ei,
+               gamma_expansion_product(l0, p, eimax), tmp, l)
+               for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==0, we need to extract a normalization factor.
         if start == 0:
             if ei1 == e:
@@ -594,81 +597,6 @@ class AmortizingHypergeometricData(HypergeometricData):
         feq_seed_num, feq_seed_den = feq_seed.as_integer_ratio()
         return matrix(ZZ, 2, 2, [feq_seed_den, 0, feq_seed_den*y1, feq_seed_num])
 
-    def amortized_padic_H_values_step(self, vectors, t, N, start, pclass, multlifts, debug=False):
-        r"""
-        Adds terms to the trace formula sum corresponding to break points, where
-        the functional equation used in the interior of the intervals does not apply.
-
-        INPUT:
-
-        - ``vectors`` -- a dictionary, indexed by primes `p`
-        - ``t`` -- a rational number, the parameter for the hypergeometric motive
-        - ``N`` -- the upper bound on primes
-        - ``start`` -- a rational number `a/b`, the left endpoint of an interval
-          (ie one of the alpha or beta)
-        - ``pclass`` -- an integer between 0 and `b`, relatively prime to `b`,
-          specifying which primes should be updated
-        - ``multlifts`` -- A dictionary whose entry at `p` is a series in `k-1`
-          computing the multiplicative lift of `t^{k-1}` modulo `p^e` (only used for `e>1`)
-        - ``debug`` -- whether to perform debugging checks
-
-        OUTPUT:
-
-        None, but updates `vectors` via
-            vectors[p] += P'_{m_i},
-        where m_i = floor(p*start), for primes `p` in the residue class
-        `pclass` modulo the denominator of `start`.
-
-        EXAMPLES::
-
-            sage: from amortizedHGM import AmortizingHypergeometricData
-            sage: from amortizedHGM.hgm_misc import multiplicative_lift
-            sage: from collections import defaultdict
-            sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]))
-            sage: e = H.e; e
-            2
-            sage: N = 1000
-            sage: t = 381/117
-            sage: start = 3/5
-            sage: P.<k1> = ZZ[]
-            sage: vectors = defaultdict(ZZ)
-            sage: multlifts = {p: multiplicative_lift(t, p, e, k1) for p in H._prime_range(t, N)[1][0]}
-            sage: H.amortized_padic_H_values_step(vectors, t, N, start, 1, multlifts)
-            sage: len(vectors)
-            39
-            sage: vectors[751]
-            163263
-        """
-        e = self.e
-        y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
-        if ps1 >= e:
-            # We still need to compute displacements if start==0, in order to set up zero_offsets.
-            if start == 0:
-                displacements = self.displacements(N, start, pclass)
-            return
-        ei1 = e - ps1
-
-        d = start.denominator()
-        indices = self._prime_range(t, N)[d][pclass]
-
-        # Retrieve precomputation results.
-        displacements = self.displacements(N, start, pclass)
-
-        for p in indices:
-            mi = (start*(p-1)).floor()
-            if ei1 == 1:
-                pe = p
-                tpow = (t%pe).powermod(mi, pe) # faster than power_mod(t, mi, p)
-            else:
-                pe = p**ei1
-                tpow = (t%pe).powermod(mi, pe) * multlifts[p](p_over_1_minus_p(p, e)*mi)
-            tmp = tpow*displacements[p][0]%pe
-            vectors[p] += tmp * y1*p**ps1
-
-            if debug:
-                print("checking step", start, p, mi, ps1)
-                assert tmp == self.verify_summand(p, t, mi, ei1)*self.zero_offsets[N][p]
-
     def amortized_padic_H_values_matrix(self, t, N, ei, y, start, end, pclass,
                                         V=None, ans=None, chained=False):
         r"""
@@ -687,10 +615,12 @@ class AmortizingHypergeometricData(HypergeometricData):
         - ``end`` -- a rational number, the right endpoint of the interval
         - ``pclass`` -- an integer between 0 and `b`, coprime to `b`,
           specifying the congruence class of primes to be summed
-        - ``V`` -- if specified, each product is premultiplied by V (this is used
-          for the chained algorithm described in [CKR20])
+        - ``V`` -- if specified, each product is premultiplied by V
+          (ignored if ``chained`` is False).
         - ``ans`` -- (optional) a dictionary, indexed by primes `p`.  If specified,
-          it will be updated with the results instead of returning them
+          it will be updated with the results instead of returning them.
+        - ``chained`` -- If True, use the chained algorithm described in [CKR20].
+          Otherwise, some rows and columns are removed from the output.
 
         OUTPUT:
 
@@ -766,6 +696,79 @@ class AmortizingHypergeometricData(HypergeometricData):
                          indices=indices, ans=ans, projective=True,
                          cutoff=None if chained else ei)
 
+    def amortized_padic_H_values_step(self, vectors, t, N, start, pclass, multlifts, debug=False):
+        r"""
+        Adds terms to the trace formula sum corresponding to break points, where
+        the functional equation used in the interior of the intervals does not apply.
+
+        INPUT:
+
+        - ``vectors`` -- a dictionary, indexed by primes `p`
+        - ``t`` -- a rational number, the parameter for the hypergeometric motive
+        - ``N`` -- the upper bound on primes
+        - ``start`` -- a rational number `a/b`, the left endpoint of an interval
+          (ie one of the alpha or beta)
+        - ``pclass`` -- an integer between 0 and `b`, relatively prime to `b`,
+          specifying which primes should be updated
+        - ``multlifts`` -- A dictionary whose entry at `p` is a series in `k-1`
+          computing the multiplicative lift of `t^{k-1}` modulo `p^e` (only used for `e>1`)
+        - ``debug`` -- whether to perform debugging checks
+
+        OUTPUT:
+
+        None, but updates `vectors` via
+            vectors[p] += P'_{m_i},
+        where m_i = floor(p*start), for primes `p` in the residue class
+        `pclass` modulo the denominator of `start`.
+
+        EXAMPLES::
+
+            sage: from amortizedHGM import AmortizingHypergeometricData
+            sage: from amortizedHGM.hgm_misc import multiplicative_lift
+            sage: from collections import defaultdict
+            sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]))
+            sage: e = H.e; e
+            2
+            sage: N = 1000
+            sage: t = 381/117
+            sage: start = 3/5
+            sage: P.<k1> = ZZ[]
+            sage: vectors = defaultdict(ZZ)
+            sage: multlifts = {p: multiplicative_lift(t, p, e, k1) for p in H._prime_range(t, N)[1][0]}
+            sage: H.amortized_padic_H_values_step(vectors, t, N, start, 1, multlifts)
+            sage: len(vectors)
+            39
+            sage: vectors[751]
+            163263
+        """
+        e = self.e
+        y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
+        if ps1 >= e:
+            # We still need to compute displacements if start==0, in order to set up zero_offsets.
+            if start == 0:
+                self.displacements(N, start, pclass)
+            return
+        ei1 = e - ps1
+
+        # Retrieve precomputation results.
+        displacements = self.displacements(N, start, pclass)
+
+        d = start.denominator()
+        for p in self._prime_range(t, N)[d][pclass]:
+            mi = (start*(p-1)).floor()
+            if ei1 == 1:
+                pe = p
+                tpow = (t%pe).powermod(mi, pe) # faster than power_mod(t, mi, p)
+            else:
+                pe = p**ei1
+                tpow = (t%pe).powermod(mi, pe) * multlifts[p](mi*p_over_1_minus_p(p, e))
+            tmp = tpow*displacements[p][0]%pe
+            vectors[p] += tmp * y1*p**ps1
+
+            if debug:
+                print("checking step", start, p, mi, ps1)
+                assert tmp == self.verify_summand(p, t, mi, ei1)*self.zero_offsets[N][p]
+
     def amortized_padic_H_values_interval(self, vectors, t, N, start, end, pclass, multlifts, debug=False):
         r"""
         Uses an amortized matrix product to compute a piece of the trace formula
@@ -829,27 +832,26 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         # Compute the amortized matrix product.
         ans = self.amortized_padic_H_values_matrix(t, N, ei, y, start, end, pclass)
-        mat = matrix(ZZ, 1, ei+1) # Temporary matrix to hold the quantities c_{i,h}(p)
 
         for p, tmp in ans.items(): #inner loop
             w = displacements[p][1]
             mi = (start*(p-1)).floor()
 
-            # Update the precomputed series to include [z]^{mi+1}.
             if ei == 1:
+                # Abbreviated version of the general case.
                 tpow = (t%p).powermod(mi+1, p) # faster than power_mod(t, mi, p)
-                tmp2 = moddiv_int(tpow*w*tmp[-1,0], tmp[0,0], p)
+                tmp2 = moddiv_int(tpow*w*tmp[-1,0], tmp[0,-1], p)
             else:
                 pe = p**ei
                 pe1 = p_over_1_minus_p(p, ei)
+
+                # Compute the c_{i,h}(p) by combining precomputed values with [z]^{mi+1}.
                 arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, d*(1-p), p**(ei-1)))
                 tpow = (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
 
                 # Compute the sum using a matrix multiplication implemented directly in Cython.
-                for i in range(ei):
-                    mat[0,-i-1] = w[i]
-                tmp2 = moddiv_int(tpow*hgm_matmult(mat, tmp, pe1, ei), tmp[0,-1], pe)
+                tmp2 = moddiv_int(tpow*hgm_matmult(w, tmp, pe1, ei), tmp[0,-1], pe)
 
             if debug:
                 # Verify that the sum, including the sign, is being computed correctly.
