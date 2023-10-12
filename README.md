@@ -3,7 +3,7 @@
 
 Sage code supporting
  - \[ [arXiv](https://arxiv.org/abs/2005.13640) [DOI](https://doi.org/https://doi.org/10.2140/obs.2020.4.143) \] **Hypergeometric L-functions in average polynomial time** by Edgar Costa, Kiran Kedlaya and David Roe
- - [ tba ] **Hypergeometric L-functions in average polynomial time, II** by Edgar Costa, Kiran Kedlaya and David Roe
+ - [ [arXiv](https://arxiv.org/abs/2310.06971) ] **Hypergeometric L-functions in average polynomial time, II** by Edgar Costa, Kiran Kedlaya and David Roe
 
 
 The previous version of the code was not a pip package, and can be found [here](https://github.com/edgarcosta/amortizedHGM/tree/arxiv/2005.13640).
