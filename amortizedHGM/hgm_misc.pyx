@@ -140,6 +140,8 @@ cpdef sign_flip(l, int e):
     Given a list l of length e of the coefficients of a polynomial f(x) in descending order,
     return the list corresponding to -f(-x).
     """
+    if l is None:
+        return None
     cdef int j
     return [l[j] if (e-j)%2 else -l[j] for j in range(e)]
 
@@ -151,13 +153,14 @@ cpdef gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, tmp):
     # Compute the finite difference of the expansion of log Gamma_p(py).
     tmp[0,0] = truncated_log_mod(-harmonics[1][p][0,1], e, p_powers[-1]) # = log -(p-1)!
     for i in range(1, e-1):
-        tmp[0, i] = (-1 if i%2 else 1)*p_powers[i-1]*moddiv_int(-harmonics[i][p][0,0], i*harmonics[i][p][0,1], p_powers[e-i-1])
+        h = harmonics[i][p]
+        tmp[0,i] = (-1 if i%2 else 1)*p_powers[i-1]*moddiv_int(-h[0,0], i*h[0,1], p_powers[e-i-1])
 
     # Use a matrix multiplication to invert the difference operator.
     tmp *= mat
     return [moddiv_int(tmp[0,i].divide_knowing_divisible_by(p_powers[i]), den, p_powers[-1-i]) for i in range(e-2,-1,-1)] + [0]
 
-cpdef gamma_translate(s, Integer p, harmonics, int e,
+cpdef gamma_translate(list s, Integer p, harmonics, int e,
                       Integer b, Integer d, int normalized):
     # Computes an inner loop in the computation of Gamma_p(x+c).
 
@@ -168,8 +171,10 @@ cpdef gamma_translate(s, Integer p, harmonics, int e,
 
     # Note that s starts out representing the *reversed* expansion at 0.
     # We combine it with the contribution from harmonic sums.
-    l = [s[j-1] + moddiv_int((1 if (e-j)%2 else -1)*harmonics[e-j][p][0,0], (e-j)*harmonics[e-j][p][0,1], p_powers[j-1]) for j in range(1,e)]
-    l.append(s[e-1])
+    l = s[::]
+    for j in range(1,e):
+        h = harmonics[e-j][p]
+        l[j-1] += moddiv_int(h[0,0] if (e-j)%2 else -h[0,0], (e-j)*h[0,1], p_powers[j-1])
 
     # Recenter the log expansion.
     tmp = p*moddiv_int(-b, d, p_powers[e-2])
@@ -180,6 +185,18 @@ cpdef gamma_translate(s, Integer p, harmonics, int e,
         l[-1] = 0 # Eliminate the constant term.
     return l
 
+cpdef expansion_from_cache(dict cache, Integer a, Integer b, Integer p, int e):
+    cdef int j
+    cdef Integer c
+
+    if (a,b,p) in cache:
+        c, j, f = cache[a, b, p]
+        return (-c if j<0 else c), 1, f
+    # Use the Legendre relation if possible.
+    c, _, f = cache[b-a, b, p]
+    # substitute x -> -x (and multiply by -1)
+    return c, -1, sign_flip(f, e)
+
 cpdef gamma_expansion_product(l, Integer p, int e):
     r"""
     Compute a product of cached expansions of Gamma_p.
@@ -187,12 +204,14 @@ cpdef gamma_expansion_product(l, Integer p, int e):
     Used in an inner loop in the computation of P_{m_i} and P_{m_i+1}.
     """
 
-    cdef int i, j, j0, j1
-    cdef Integer num, den, tmp0, inum, iden
+    cdef dict gammas_cache, flgl
+    cdef int gammas_e, i, j, j0, j1
+    cdef list gammasum
+    cdef Integer num, den, tmp0, inum, iden, c
 
     # Import local variables from the calling scope. These do not depend on p.
     # Note: gammasum will be updated on output.
-    gammas, flgl, gammasum = l
+    gammas, gammas_cache, gammas_e, flgl, gammasum = l
 
     num = Integer(1)
     den = Integer(1)
@@ -201,9 +220,12 @@ cpdef gamma_expansion_product(l, Integer p, int e):
             gammasum[i] = 0
     
     for (inum,iden),j in flgl.items(): # i = inum/iden
-        # if e=1, then tmp1=1 and is unused
-        tmp0, j0, tmp1 = gammas.expansion((inum, iden, p))
-        j1 = j if j0 == 1 else -j
+        try:
+            tmp0, j0, tmp1 = expansion_from_cache(gammas_cache, inum, iden, p, gammas_e)
+        except KeyError: # Force cache extension
+            tmp0, j0, tmp1 = gammas.expansion((inum, iden, p))
+        j1 = j if j0>0 else -j
+
         if j1 > 0:
             num *= tmp0 if j1==1 else tmp0**j1
         else:
@@ -245,6 +267,8 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, t, tmp, l):
 
     cdef int i, etmp, e1fac, efac, index
     cdef Integer r, d, p1, arg0, gammaprodnum, gammaprodden, num, den, tmp3
+    cdef list ans = [], gammasum0, gammasum
+    cdef tuple tmp_index
 
     num, den, gammasum0 = t
     
@@ -252,12 +276,11 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, t, tmp, l):
     if l is not None:
         tmp2, r, d, e1fac, efac, inter_polys, k1 = l
     
-    ans = []
-
     for index in range(2):
         # Adjust the computed product to account for integer shifts.
-        gammaprodnum = tmp[index][0]*num
-        gammaprodden = tmp[index][1]*den
+        tmp_index = tmp[index]
+        gammaprodnum = tmp_index[0]*num
+        gammaprodden = tmp_index[1]*den
 
         etmp = (e1, e)[index]
         if etmp <= 0:
@@ -267,7 +290,7 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, t, tmp, l):
         elif index == 0 and r == 0:
             # Abbreviated version of the general case.
             p1 = p**e1
-            tmp3 = gammasum0[-1] + moddiv_int(tmp2[0][0][0], tmp2[0][0][1], p1)
+            tmp3 = gammasum0[-1] + moddiv_int(*tmp2[0][0], p1)
             ans.append(moddiv_int(gammaprodnum*truncated_exp_int(tmp3, e1), gammaprodden*e1fac, p1))
         else:
             # Adjust the logarithmic series expansion to account for integer shifts.
@@ -275,7 +298,7 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, t, tmp, l):
             p_powers = powers_list(p, etmp)
             p_powers.insert(0, Integer(1))
             tmp2i = tmp2[index]
-            gammasum = [gammasum0[i-etmp] + moddiv_int(tmp2i[etmp-1-i][0], tmp2i[etmp-1-i][1], p_powers[i+1]) for i in range(etmp)]
+            gammasum = [gammasum0[i-etmp] + moddiv_int(*tmp2i[etmp-1-i], p_powers[i+1]) for i in range(etmp)]
 
             if index == 0: # Forces r > 0
                 arg0 = p*moddiv_int(-r, d if etmp==2 else d*(1-p), p_powers[-2])
@@ -290,8 +313,9 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, t, tmp, l):
                     tmp1 += truncated_exp_int(tmp3, e)*inter_polys[i]
                 # Remove formal powers of p and multiply by the carried constant.
                 for i in range(e):
-                    gammasum[e-1-i] = tmp1[i].divide_knowing_divisible_by(p_powers[i])
-                    gammasum[e-1-i] = moddiv_int(gammasum[e-i-1]*gammaprodnum, gammaprodden*efac, p_powers[-i-1])
+                    tmp3 = tmp1[i]
+                    tmp3 = tmp3.divide_knowing_divisible_by(p_powers[i])*gammaprodnum
+                    gammasum[e-1-i] = moddiv_int(tmp3, gammaprodden*efac, p_powers[-i-1])
                 ans.append(eval_poly_as_gen(gammasum, k1))
     return ans
 

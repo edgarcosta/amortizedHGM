@@ -545,7 +545,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         ei = e-ps
         eimax = max(ei1, ei)
         gammasum = None if eimax==1 else [0 for i in range(eimax)]
-        l0 = (gammas, flgl, gammasum)
+        l0 = (gammas, gammas.cache, gammas.e, flgl, gammasum)
         
         d = start.denominator()
         r = start.numerator()*(pclass-1) % d
@@ -754,20 +754,32 @@ class AmortizingHypergeometricData(HypergeometricData):
         displacements = self.displacements(N, start, pclass)
 
         d = start.denominator()
-        for p in self._prime_range(t, N)[d][pclass]:
-            mi = (start*(p-1)).floor()
-            if ei1 == 1:
-                pe = p
-                tpow = (t%pe).powermod(mi, pe) # faster than power_mod(t, mi, p)
-            else:
+
+        def debug_check():
+            print("checking step", start, p, mi, ps1)
+            assert tmp == y1*self.verify_summand(p, t, mi, ei1)*self.zero_offsets[N][p]
+
+        if ei1 == 1: # Abbreviated version of the general case.
+            for p in self._prime_range(t, N)[d][pclass]:
+                mi = (start*(p-1)).floor()
+                tpow = (t%p).powermod(mi, p) # faster than power_mod(t, mi, p)
+                tmp = y1*(tpow*displacements[p][0]%p)
+                if debug:
+                    debug_check()
+                if ps1:
+                    tmp *= p if ps1==1 else p**ps1
+                vectors[p] += tmp
+        else:
+            for p in self._prime_range(t, N)[d][pclass]:
+                mi = (start*(p-1)).floor()
                 pe = p**ei1
                 tpow = (t%pe).powermod(mi, pe) * multlifts[p](mi*p_over_1_minus_p(p, e))
-            tmp = tpow*displacements[p][0]%pe
-            vectors[p] += tmp * y1*p**ps1
-
-            if debug:
-                print("checking step", start, p, mi, ps1)
-                assert tmp == self.verify_summand(p, t, mi, ei1)*self.zero_offsets[N][p]
+                tmp = y1*(tpow*displacements[p][0]%pe)
+                if debug:
+                    debug_check()
+                if ps1:
+                    tmp *= p if ps1==1 else p**ps1
+                vectors[p] += tmp
 
     def amortized_padic_H_values_interval(self, vectors, t, N, start, end, pclass, multlifts, debug=False):
         r"""
@@ -833,34 +845,46 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Compute the amortized matrix product.
         ans = self.amortized_padic_H_values_matrix(t, N, ei, y, start, end, pclass)
 
-        for p, tmp in ans.items(): #inner loop
-            w = displacements[p][1]
-            mi = (start*(p-1)).floor()
+        def debug_check():
+            # Verify that the sum, including the sign, is being computed correctly.
+            mi1 = (end*(p-1)).floor()
+            print("checking sum", start, p, mi+1, mi1, ps)
+            assert tmp2 == y*sum(self.verify_summand(p, t, m, ei) for m in range(mi+1,mi1))*self.zero_offsets[N][p]
 
-            if ei == 1:
-                # Abbreviated version of the general case.
+        if ei == 1: # Abbreviated version of the general case.
+            for p, tmp in ans.items(): #inner loop
+                w = displacements[p][1]
+                mi = (start*(p-1)).floor()
                 tpow = (t%p).powermod(mi+1, p) # faster than power_mod(t, mi, p)
                 tmp2 = moddiv_int(tpow*w*tmp[-1,0], tmp[0,-1], p)
-            else:
+                if debug:
+                    debug_check()
+                if ps:
+                    tmp2 *= p if ps==1 else p**ps
+                vectors[p] += tmp2
+        else:
+            for p, tmp in ans.items(): #inner loop
+                p_minus_1 = p-1
+                w = displacements[p][1]
+                mi = (start*p_minus_1).floor()
                 pe = p**ei
                 pe1 = p_over_1_minus_p(p, ei)
 
                 # Compute the c_{i,h}(p) by combining precomputed values with [z]^{mi+1}.
-                arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, d*(1-p), p**(ei-1)))
+                arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, -d*p_minus_1, p**(ei-1)))
                 tpow = (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
 
                 # Compute the sum using a matrix multiplication implemented directly in Cython.
                 tmp2 = moddiv_int(tpow*hgm_matmult(w, tmp, pe1, ei), tmp[0,-1], pe)
 
-            if debug:
-                # Verify that the sum, including the sign, is being computed correctly.
-                mi1 = (end*(p-1)).floor()
-                print("checking sum", start, p, mi+1, mi1, ps)
-                assert tmp2 == y*sum(self.verify_summand(p, t, m, ei) for m in range(mi+1,mi1))*self.zero_offsets[N][p]
+                if debug:
+                    debug_check()
 
-            # Include the variable power of p and accumulate the result.
-            vectors[p] += tmp2 * p**ps
+                # Include the variable power of p and accumulate the result.
+                if ps:
+                    tmp2 *= p if ps==1 else p**ps
+                vectors[p] += tmp2
 
     def amortized_padic_H_values(self, t, N, chained=None, debug=False):
         """

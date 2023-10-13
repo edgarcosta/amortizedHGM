@@ -13,11 +13,11 @@ from sage.matrix.constructor import matrix
 
 from pyrforest import batch_harmonic, batch_factorial
 from .hgm_misc import (
+    expansion_from_cache,
     gamma_expansion_at_0,
     gamma_translate,
     moddiv_int,
     powers_list,
-    sign_flip,
     truncated_log_mod,
 )
 
@@ -199,18 +199,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: all(Zp(p)(a/b + 3*p, e).gamma() == c^i * Zp(p)(f(3*p), e).exp() for ((a,b,p),(c,i,f)) in cache.cache.items()) # FIXME
             True
         """
-        tmp = self.cache.get(abp)
-        if tmp is not None:
-            return (-tmp[0] if tmp[1]<0 else tmp[0]), 1, tmp[2]
-        a, b, p = abp
         try:
-            # Use the Legendre relation if possible.
-            c, _, f = self.cache[b-a, b, p]
-            if f is None:
-                return c, -1, None
-            # substitute x -> -x (and multiply by -1)
-            return c, -1, sign_flip(f, self.e)
+            return expansion_from_cache(self.cache, *abp, self.e)
         except KeyError:
+            a, b, p = abp
             if p <= self.e:
                 raise ValueError(f"Cache does not support primes smaller than {self.e+1}")
             if p >= self.N:
@@ -344,7 +336,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             (2, -1, [2, 14, 147])
         """
         def add_to_cache(b, d, p, c0, l):
-            sgn, i = divmod(-b*p, d)
+            sgn, i = d.__rdivmod__(-b*p) # Same as divmod(-b*p, d)
             return ((i,d,p), (c0, -1 if sgn%2 else 1, l))
 
         n, e = self.N, self.e
