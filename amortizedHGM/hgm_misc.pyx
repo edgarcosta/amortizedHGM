@@ -176,7 +176,7 @@ cpdef gamma_translate(list s, Integer p, harmonics, int e, Integer b, Integer d)
     # Note that s starts out representing the *reversed* expansion at 0.
     # We combine it with the contribution from harmonic sums.
     l = s[::]
-    for j in range(1,e):
+    for j in range(1, e):
         h = harmonics[e-j][p]
         l[j-1] += moddiv_int(h[0,0] if (e-j)%2 else -h[0,0], (e-j)*h[0,1], p_powers[j-1])
 
@@ -186,7 +186,7 @@ cpdef gamma_translate(list s, Integer p, harmonics, int e, Integer b, Integer d)
         for j in range(i, 0, -1):
             l[j] = (l[j]+l[j-1]*tmp)%p_powers[j]
 
-    # Prepare output for cache.
+    # Prepare output for cache. Note that h = harmonics[1][p].
     sgn, k = d.__rdivmod__(-b*p) # Same as divmod(-b*p, d)
     sgn = Integer(-1) if sgn%2 else Integer(1)
     return ((k, d, p), (h[0,1], sgn, l))
@@ -319,8 +319,10 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den
                     tmp1 = 1 + gammasum[0]*k1
                 elif e == 3: # Abbreviated version of the next step
                     tmp1 = 2*(2 + 2*gammasum[1]*k1 + (gammasum[1]**2 + 2*gammasum[0])*k1**2)
-                else: # index == 1 and e > 2
-                    gammasum[-1] = Integer(0)             
+                elif e == 4: # Abbreviated version of the next step
+                    tmp1 = 6*(6 + 6*gammasum[2]*k1 + (3*gammasum[2]**2 + 6*gammasum[1])*k1**2 + (gammasum[2]**3 + 6*gammasum[1]*gammasum[2] + 6*gammasum[0])*k1**3)
+                else: # index == 1 and e > 4
+                    gammasum[-1] = Integer(0)
                     # Compute the polynomial with coefficients c_{i,h}(p) by interpolation.
                     # This introduces a factor of 1/(e-1)!**2 into the carried constant.
                     tmp1 = 0*k1
