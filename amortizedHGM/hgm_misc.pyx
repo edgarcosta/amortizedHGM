@@ -311,20 +311,30 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den
                 tmp3 = eval_poly_as_gen_int(gammasum, arg0)
                 tmp3 = truncated_exp_int(tmp3, e1)
                 ans.append(moddiv_int(prod_num*tmp3, prod_den*e1fac, p_powers[-1]))
-            else: # index == 1 and e > 1
-                # Compute the polynomial with coefficients c_{i,h}(p) by interpolation.
-                # This introduces a factor of (e-1)! to be removed at the next step.
-                tmp1 = 0*k1
-                for i in range(e):
-                    tmp3 = eval_poly_as_gen_int(gammasum, i*p)
-                    tmp1 += truncated_exp_int(tmp3, e)*inter_polys[i]
-                # Remove formal powers of p.
-                for i in range(e):
-                    tmp3 = tmp1[i].divide_knowing_divisible_by(p_powers[i])
-                    gammasum[e-1-i] = tmp3 % p_powers[-i-1]
+            else:
+                # Extract c_{i,0}(p).
+                # This introduces a factor of 1/(e-1)! into the carried constant.
+                prod_num *= truncated_exp_int(gammasum[-1], e)
+                if e == 2: # Abbreviated version of the next step
+                    tmp1 = 1 + gammasum[0]*k1
+                elif e == 3: # Abbreviated version of the next step
+                    tmp1 = 2*(2 + 2*gammasum[1]*k1 + (gammasum[1]**2 + 2*gammasum[0])*k1**2)
+                else: # index == 1 and e > 2
+                    gammasum[-1] = Integer(0)             
+                    # Compute the polynomial with coefficients c_{i,h}(p) by interpolation.
+                    # This introduces a factor of 1/(e-1)!**2 into the carried constant.
+                    tmp1 = 0*k1
+                    for i in range(e):
+                        tmp3 = eval_poly_as_gen_int(gammasum, i*p) if i else Integer(0)
+                        tmp1 += truncated_exp_int(tmp3, e)*inter_polys[i]
+                    # Remove formal powers of p.
+                    for i in range(e):
+                        tmp3 = tmp1[i].divide_knowing_divisible_by(p_powers[i])
+                        gammasum[e-1-i] = tmp3 % p_powers[-i-1]
+                    tmp1 = eval_poly_as_gen(gammasum, k1)
                 # Return the carried constant separately.
                 tmp3 = moddiv_int(prod_num, prod_den*efac, p_powers[-1])
-                ans.append((tmp3, eval_poly_as_gen(gammasum, k1)))
+                ans.append((tmp3, tmp1))
     return ans
 
 cpdef Integer hgm_matmult(w, ans, Integer pe1, int s):

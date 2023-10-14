@@ -554,7 +554,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         tmp = tuple(t.as_integer_ratio() for t in tmp)
         l = None if max(ei1, ei) <= 1 else (tmp2, r, d, 
             1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
-            1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys, R1.gen())
+            1 if ei<1 else factorial(ZZ(ei-1))**3, inter_polys, R1.gen())
 
         ans = {p: gammas_to_displacements(p, ei1, ei,
                *gamma_expansion_product(l0, p, eimax), tmp, l)
