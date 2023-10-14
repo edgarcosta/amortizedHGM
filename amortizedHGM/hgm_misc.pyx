@@ -164,12 +164,11 @@ cpdef list gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, t
     ans.append(0)
     return ans
 
-cpdef gamma_translate(list s, Integer p, harmonics, int e,
-                      Integer b, Integer d, int normalized):
+cpdef gamma_translate(list s, Integer p, harmonics, int e, Integer b, Integer d):
     # Computes an inner loop in the computation of Gamma_p(x+c).
 
     cdef int i, j
-    cdef Integer tmp
+    cdef Integer tmp, sgn, k
     cdef list p_powers
 
     p_powers = powers_list(p, e)
@@ -186,10 +185,11 @@ cpdef gamma_translate(list s, Integer p, harmonics, int e,
     for i in range(1, e):
         for j in range(i, 0, -1):
             l[j] = (l[j]+l[j-1]*tmp)%p_powers[j]
-    if normalized:
-        l[-1] = 0 # Eliminate the constant term.
-        return Integer(1), l
-    return h[0,1], l
+
+    # Prepare output for cache.
+    sgn, k = d.__rdivmod__(-b*p) # Same as divmod(-b*p, d)
+    sgn = Integer(-1) if sgn%2 else Integer(1)
+    return ((k, d, p), (h[0,1], sgn, l))
 
 cpdef expansion_from_cache(dict cache, Integer a, Integer b, Integer p, int e):
     cdef int j

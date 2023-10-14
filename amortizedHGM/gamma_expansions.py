@@ -310,7 +310,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         harmonics, den, mat, tmp = self._expansion0_prep()
         return {p: self._expansion0(p, harmonics, den, mat, tmp) for p in prime_range(self.e+1, self.N)}
 
-    def _set_expansion_at_offset(self, d, normalized=False):
+    def _set_expansion_at_offset(self, d):
         """
         Amortized computation of power series expansions of log `p`-adic Gamma around
         all rational numbers with denominator `d` between 0 and 1,
@@ -321,7 +321,6 @@ class pAdicLogGammaCache(UniqueRepresentation):
         INPUT:
 
         - `d` -- a positive integer, the denominator
-        - ``normalized`` -- boolean, whether to omit constant terms for efficiency
 
         EXAMPLES::
 
@@ -332,33 +331,31 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache.cache[2,3,7]
             (2, -1, [2, 14, 147])
         """
-        def add_to_cache(b, d, p, c0, l):
+        def add_to_cache(b, d, p, c0):
             sgn, i = d.__rdivmod__(-b*p) # Same as divmod(-b*p, d)
-            return ((i, d, p), (c0, -1 if sgn%2 else 1, l))
+            return ((i, d, p), (c0, -1 if sgn%2 else 1, None))
 
         n, e = self.N, self.e
-        one, minusone = ZZ(1), ZZ(-1)
+        zero, one, minusone = ZZ(0), ZZ(1), ZZ(-1)
         if e == 1:
             if d == 1:
-                self.cache.update(((0, 1, p), (minusone, -1, None)) for p in prime_range(3, n))
+                self.cache.update(((zero, one, p), (minusone, minusone, None)) for p in prime_range(3, n))
             else:
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
                         fac = batch_factorial(n, 1, b/d)
-                        self.cache.update(add_to_cache(b,d,p,f,None) for p,f in fac.items()) # inner loop
+                        self.cache.update(add_to_cache(b,d,p,f) for p,f in fac.items()) # inner loop
         else:
             zero_exp = self._expansion_at_0
             if d == 1:
-                self.cache.update(((0, 1, p), (minusone, -1, s)) for p, s in zero_exp.items())
+                self.cache.update(((zero, one, p), (minusone, minusone, s)) for p, s in zero_exp.items())
             else:
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
-                        harmonics = {j: batch_harmonic(n, e-j if (j>1 or normalized) else e, 
+                        harmonics = {j: batch_harmonic(n, e-j if j>1 else e, 
                             b/d, j, proj=True) for j in range(1, e)}
                         # Combine the expansion at 0 with the contribution from
                         # harmonic sums, then recenter the log expansion.
-                        # If not normalized, also extract the constant term.
-                        self.cache.update(add_to_cache(b, d, p,
-                                *gamma_translate(s, p, harmonics, e, b, d, False)) 
+                        self.cache.update(gamma_translate(s, p, harmonics, e, b, d) 
                                 for p,s in zero_exp.items() if p>d or d%p) # inner loop
 
