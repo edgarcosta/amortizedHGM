@@ -16,9 +16,7 @@ from .hgm_misc import (
     expansion_from_cache,
     gamma_expansion_at_0,
     gamma_translate,
-    moddiv_int,
-    powers_list,
-    truncated_log_mod,
+    powers_list
 )
 
 class pAdicLogGammaCache(UniqueRepresentation):

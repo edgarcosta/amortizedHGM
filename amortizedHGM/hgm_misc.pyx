@@ -2,7 +2,6 @@ from cpython cimport array
 from sage.rings.fast_arith cimport prime_range
 from sage.rings.integer cimport Integer
 from sage.rings.rational cimport Rational
-from sage.structure.element import parent
 
 # ******* 
 # Utility functions
@@ -135,17 +134,6 @@ cpdef dict prime_range_by_residues(a, b, dens, m, s):
                 prime_ranges[d][p % d].append(p)
     return prime_ranges
 
-cpdef sign_flip(l, int e):
-    r"""
-    Given a list l of length e of the coefficients of a polynomial f(x) in descending order,
-    return the list corresponding to -f(-x).
-    """
-    cdef int j
-
-    if l is None:
-        return None
-    return [l[j] if (e-j)%2 else -l[j] for j in range(e)]
-
 cpdef list gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, tmp):
     cdef int i
     cdef list ans, p_powers
@@ -156,15 +144,17 @@ cpdef list gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, t
     tmp[0,0] = truncated_log_mod(-harmonics[1][p][0,1], e, p_powers[-1]) # = log -(p-1)!
     for i in range(1, e-1):
         h = harmonics[i][p]
-        tmp[0,i] = (-1 if i%2 else 1)*p_powers[i-1]*moddiv_int(-h[0,0], i*h[0,1], p_powers[e-i-1])
+        tmp[0,i] = (-1 if i%2 else 1)*p_powers[i-1]*moddiv_int(-h[0,0], 
+            i*h[0,1], p_powers[e-i-1])
 
     # Use a matrix multiplication to invert the difference operator.
     tmp *= mat
-    ans = [moddiv_int(tmp[0,i].divide_knowing_divisible_by(p_powers[i]), den, p_powers[-1-i]) for i in range(e-2,-1,-1)] 
+    ans = [moddiv_int(tmp[0,i].divide_knowing_divisible_by(p_powers[i]), 
+        den, p_powers[-1-i]) for i in range(e-2,-1,-1)] 
     ans.append(0)
     return ans
 
-cpdef gamma_translate(list s, Integer p, harmonics, int e, Integer b, Integer d):
+cpdef tuple gamma_translate(list s, Integer p, harmonics, int e, Integer b, Integer d):
     # Computes an inner loop in the computation of Gamma_p(x+c).
 
     cdef int i, j
@@ -191,6 +181,17 @@ cpdef gamma_translate(list s, Integer p, harmonics, int e, Integer b, Integer d)
     sgn = Integer(-1) if sgn%2 else Integer(1)
     return ((k, d, p), (h[0,1], sgn, l))
 
+cdef sign_flip(l, int e):
+    r"""
+    Given a list l of length e of the coefficients of a polynomial f(x) in descending order,
+    return the list corresponding to -f(-x).
+    """
+    cdef int j
+
+    if l is None:
+        return None
+    return [l[j] if (e-j)%2 else -l[j] for j in range(e)]
+
 cpdef expansion_from_cache(dict cache, Integer a, Integer b, Integer p, int e):
     cdef int j
     cdef Integer c
@@ -213,14 +214,13 @@ cpdef gamma_expansion_product(l, Integer p, int e):
     cdef dict gammas_cache, flgl
     cdef int gammas_e, i, j, j0, j1
     cdef list gammasum
-    cdef Integer num, den, tmp0, inum, iden, c
+    cdef Integer tmp0, inum, iden, c
 
     # Import local variables from the calling scope. These do not depend on p.
     # Note: gammasum will be updated on output.
     gammas, gammas_cache, gammas_e, flgl, gammasum = l
 
-    num = Integer(1)
-    den = Integer(1)
+    cdef Integer num = Integer(1), den = Integer(1)
     if e > 1:
         for i in range(e):
             gammasum[i] = 0
@@ -269,8 +269,9 @@ cdef Integer eval_poly_as_gen_int(l, Integer x):
 
 cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den,
     list gammasum0, tmp, l):
-    # Computes an inner loop in the computation of P_{m_i} and P_{m_i+1}.
-    # Assumes t is the output of gamma_expansion_product.
+    r"""
+    Compute an inner loop in the computation of P_{m_i} and P_{m_i+1}.
+    """
 
     cdef int i, etmp, e1fac, efac, index
     cdef Integer r, d, p1, arg0, prod_num, prod_den, tmp3
