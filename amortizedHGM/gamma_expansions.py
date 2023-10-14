@@ -65,10 +65,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             Nold = self.N
             self.N = N
             if self.e > 1:
-                harmonics, den, mat, tmp = self._expansion0_prep()
-                E0 = self._expansion_at_0
-                for p in prime_range(Nold, N):
-                    E0[p] = self._expansion0(p, harmonics, den, mat, tmp)
+                self._expansion_at_0
 
     def clear_cache(self):
         """
@@ -337,7 +334,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         """
         def add_to_cache(b, d, p, c0, l):
             sgn, i = d.__rdivmod__(-b*p) # Same as divmod(-b*p, d)
-            return ((i,d,p), (c0, -1 if sgn%2 else 1, l))
+            return ((i, d, p), (c0, -1 if sgn%2 else 1, l))
 
         n, e = self.N, self.e
         one, minusone = ZZ(1), ZZ(-1)
@@ -354,7 +351,6 @@ class pAdicLogGammaCache(UniqueRepresentation):
             if d == 1:
                 self.cache.update(((0, 1, p), (minusone, -1, s)) for p, s in zero_exp.items())
             else:
-                Z1 = ZZ(1)
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
                         harmonics = {j: batch_harmonic(n, e-j if (j>1 or normalized) else e, 
@@ -362,8 +358,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
                         # Combine the expansion at 0 with the contribution from
                         # harmonic sums, then recenter the log expansion.
                         # If not normalized, also extract the constant term.
-                        self.cache.update(add_to_cache(b,d,p,
-                            Z1 if normalized else harmonics[1][p][0,1],
-                            gamma_translate(s, p, harmonics, e, b, d, normalized)) 
-                            for p,s in zero_exp.items() if p>d or d%p) # inner loop
+                        self.cache.update(add_to_cache(b, d, p,
+                                *gamma_translate(s, p, harmonics, e, b, d, False)) 
+                                for p,s in zero_exp.items() if p>d or d%p) # inner loop
 

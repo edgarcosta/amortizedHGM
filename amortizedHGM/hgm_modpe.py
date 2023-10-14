@@ -557,7 +557,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             1 if ei<1 else factorial(ZZ(ei-1))**2, inter_polys, R1.gen())
 
         ans = {p: gammas_to_displacements(p, ei1, ei,
-               gamma_expansion_product(l0, p, eimax), tmp, l)
+               *gamma_expansion_product(l0, p, eimax), tmp, l)
                for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
         # If start==0, we need to extract a normalization factor.
         if start == 0:
@@ -865,14 +865,14 @@ class AmortizingHypergeometricData(HypergeometricData):
         else:
             for p, tmp in ans.items(): #inner loop
                 p_minus_1 = p-1
-                w = displacements[p][1]
+                w0, w = displacements[p][1]
                 mi = (start*p_minus_1).floor()
                 pe = p**ei
                 pe1 = p_over_1_minus_p(p, ei)
 
                 # Compute the c_{i,h}(p) by combining precomputed values with [z]^{mi+1}.
                 arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, -d*p_minus_1, p**(ei-1)))
-                tpow = (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
+                tpow = w0 * (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
 
                 # Compute the sum using a matrix multiplication implemented directly in Cython.
