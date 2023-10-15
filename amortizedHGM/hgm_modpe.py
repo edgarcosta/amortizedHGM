@@ -179,6 +179,9 @@ class AmortizingHypergeometricData(HypergeometricData):
         self.gammas_cache = pAdicLogGammaCache(e)
         self.zero_offsets = {}
 
+    def break_mults_by_pclass(self, start, pclass):
+        return self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
+
     @cached_method
     def truncated_starts_ends(self):
         r"""
@@ -510,7 +513,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             {37: 624, 47: 106}
         """
         e = self.e
-        _, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
+        _, ps1 = self.break_mults_by_pclass(start, pclass)
         _, ps = self.interval_mults[start]
         if start == 0: 
             # Need initial value modulo p**e for normalization.
@@ -589,7 +592,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             [  43776       0]
             [ -43776 1529437]
         """
-        y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
+        y1, ps1 = self.break_mults_by_pclass(start, pclass)
         y1 *= 0**ps1
         multiplier = lambda x: -x if x else ZZ(-1)
         flgl = self._numden_factors(start, pclass)
@@ -742,11 +745,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             163263
         """
         e = self.e
-        y1, ps1 = self.break_mults_p1[start] if pclass == 1 else self.break_mults[start]
+        y1, ps1 = self.break_mults_by_pclass(start, pclass)
         if ps1 >= e:
-            # We still need to compute displacements if start==0, in order to set up zero_offsets.
-            if start == 0:
-                self.displacements(N, start, pclass)
             return
         ei1 = e - ps1
 
@@ -920,13 +920,10 @@ class AmortizingHypergeometricData(HypergeometricData):
         if self.swap is not None:
             return self.swap.amortized_padic_H_values(1/t, N, chained, debug)
         e = self.e
-        if chained is None: # Chained products only available for e=1, use them by default.
-            chained = (e==1)
-        if e > 1:
+        if e > 1: # Chained products only available for e=1.
             chained = False
-
-        # Precompute Gamma values.
-        self.gammas_cache.increase_N(N)
+        elif chained is None: # For e=1, default to chained products.
+            chained = True
 
         # Compute the series expansions of ([t]/t)^k1.
         if e == 1:
@@ -943,13 +940,19 @@ class AmortizingHypergeometricData(HypergeometricData):
                     assert power_mod(t*multlifts[p](pe1),pe-1,pe) == 1
                     assert multlifts[p](pe1)%p == 1
 
-        tmp = identity_matrix(2) if chained else ZZ(0)
+        if chained:
+            tmp = identity_matrix(2)
+        else:
+            # Precompute Gamma values and zero offsets.
+            self.gammas_cache.increase_N(N)
+            self.displacements(N, ZZ(0), ZZ(0))
+            tmp = ZZ(0)
         vectors = {p: tmp for p in self._prime_range(t, N)[1][0]}
         for start, end in self.truncated_starts_ends():
             d = start.denominator()
             for pclass in range(d):
                 if d.gcd(pclass) == 1:
-                    if e == 1 and chained:
+                    if chained: # Forces e==1
                         # Construct the matrix T_i.
                         Ti = self.amortized_padic_H_values_ferry(t, start, pclass)
                         # Update vectors by multiplying by T_i*S_i(p).
@@ -962,7 +965,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                         self.amortized_padic_H_values_interval(vectors, t, N, start, end, pclass, multlifts, debug)
 
         # Extract results.
-        if e == 1 and chained:
+        if chained: # Forces e==1
             return {p: moddiv_int(mat[1,0], mat[0,0], p) for p, mat in vectors.items()}
         zero_offsets = self.zero_offsets[N]
         return {p: moddiv_int(tmp, (1-p)*zero_offsets[p], p**e) for p, tmp in vectors.items()}
