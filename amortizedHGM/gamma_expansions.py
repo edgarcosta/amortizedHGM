@@ -13,10 +13,10 @@ from sage.matrix.constructor import matrix
 
 from pyrforest import batch_harmonic, batch_factorial
 from .hgm_misc import (
+    expansion_from_cache,
+    gamma_expansion_at_0,
     gamma_translate,
-    moddiv_int,
-    sign_flip,
-    truncated_log_mod,
+    powers_list
 )
 
 class pAdicLogGammaCache(UniqueRepresentation):
@@ -63,10 +63,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             Nold = self.N
             self.N = N
             if self.e > 1:
-                harmonics, den, mat = self._expansion0_prep()
-                E0 = self._expansion_at_0
-                for p in prime_range(Nold, N):
-                    E0[p] = self._expansion0(p, harmonics, den, mat)
+                self._expansion_at_0
 
     def clear_cache(self):
         """
@@ -157,7 +154,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             peD = {}
             for (a, b, p), (c, d, f) in cache.items():
                 if p not in peD:
-                    peD[p] = [p**(i+1) for i in range(e)]
+                    peD[p] = powers_list(p, e)
                 pe = peD[p]
                 c = c % pe[-1]
                 f = [f[i] % pe[i] for i in range(e)]
@@ -197,19 +194,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: all(Zp(p)(a/b + 3*p, e).gamma() == c^i * Zp(p)(f(3*p), e).exp() for ((a,b,p),(c,i,f)) in cache.cache.items()) # FIXME
             True
         """
-        tmp = self.cache.get(abp)
-        if tmp is not None:
-            return tmp[0]*tmp[1], 1, tmp[2]
-        a, b, p = abp
         try:
-            # Use the Legendre relation if possible.
-            c, _, f = self.cache[b-a, b, p]
-            if f is None:
-                return c, -1, None
-            # substitute x -> -x (and multiply by -1)
-            e = self.e
-            return c, -1, sign_flip(f, e)
+            return expansion_from_cache(self.cache, *abp, self.e)
         except KeyError:
+            a, b, p = abp
             if p <= self.e:
                 raise ValueError(f"Cache does not support primes smaller than {self.e+1}")
             if p >= self.N:
@@ -230,6 +218,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         - ``den`` -- the factorial of e-1
         - ``mat`` -- a lower triangular (e-1)x(e-1) matrix of binomial coefficients,
           with (i,j) entry equal to (e-1)! times the entry of the matrix inverse of binomial(i+1, j)
+        - ``tmp`` -- a 1x(e-1) matrix of integers, initially 0
 
         EXAMPLES::
 
@@ -237,7 +226,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache = pAdicLogGammaCache(5)
             sage: cache.clear_cache()
             sage: cache.increase_N(20)
-            sage: harmonics, den, mat = cache._expansion0_prep()
+            sage: harmonics, den, mat, tmp = cache._expansion0_prep()
             sage: set(harmonics)
             {1, 2, 3}
             sage: set(harmonics[1])
@@ -268,9 +257,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
         mat0 = matrix(ZZ, [[binomial(i+1, j) if i>=j else 0 for j in range(e-1)] for i in range(e-1)])
         den = factorial(ZZ(e-1))
         mat = (~mat0*den).change_ring(ZZ)
-        return harmonics, den, mat
+        tmp = matrix(ZZ, 1, e-1)
+        return harmonics, den, mat, tmp
 
-    def _expansion0(self, p, harmonics, den, mat):
+    def _expansion0(self, p, harmonics, den, mat, tmp):
         """
         A helper function for ``_expansion_at_0`` that computes the expansion of Gamma_p(x) at 0
         without caching.
@@ -281,20 +271,15 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache = pAdicLogGammaCache(5)
             sage: cache.clear_cache()
             sage: cache.increase_N(20)
-            sage: harmonics, den, mat = cache._expansion0_prep()
-            sage: cache._expansion0(17, harmonics, den, mat)
+            sage: harmonics, den, mat, tmp = cache._expansion0_prep()
+            sage: cache._expansion0(17, harmonics, den, mat, tmp)
             [0, 72500, 0, 230, 0]
             sage: Zp(17)(3*17,5).gamma()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
             sage: Zp(17)(72500*(3*17) + 230*(3*17)^3, 4).exp()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
-        e = self.e
-        pe = [p**(i+1) for i in range(e)]
-        logfac = truncated_log_mod(-harmonics[1][p][0,1], e, pe[-1]) # = log -(p-1)!
-        tmp = matrix(ZZ, 1, e-1, [logfac] + [(-1 if j%2 else 1)*pe[j-1]*moddiv_int(-harmonics[j][p][0,0], j*harmonics[j][p][0,1], pe[e-j-1]) for j in range(1,e-1)])
-        tmp *= mat
-        return [moddiv_int(tmp[0,i].divide_knowing_divisible_by(pe[i]), den, pe[-1-i]) for i in range(e-2,-1,-1)] + [0]
+        return gamma_expansion_at_0(p, self.e, harmonics, den, mat, tmp)
 
     @lazy_attribute
     def _expansion_at_0(self):
@@ -320,10 +305,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: Zp(17)(72500*(3*17) + 230*(3*17)^3, 4).exp()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
-        harmonics, den, mat = self._expansion0_prep()
-        return {p: self._expansion0(p, harmonics, den, mat) for p in prime_range(self.e+1, self.N)}
+        harmonics, den, mat, tmp = self._expansion0_prep()
+        return {p: self._expansion0(p, harmonics, den, mat, tmp) for p in prime_range(self.e+1, self.N)}
 
-    def _set_expansion_at_offset(self, d, normalized=False):
+    def _set_expansion_at_offset(self, d):
         """
         Amortized computation of power series expansions of log `p`-adic Gamma around
         all rational numbers with denominator `d` between 0 and 1,
@@ -334,7 +319,6 @@ class pAdicLogGammaCache(UniqueRepresentation):
         INPUT:
 
         - `d` -- a positive integer, the denominator
-        - ``normalized`` -- boolean, whether to omit constant terms for efficiency
 
         EXAMPLES::
 
@@ -345,37 +329,31 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache.cache[2,3,7]
             (2, -1, [2, 14, 147])
         """
-        def add_to_cache(b, d, p, c0, l):
-            sgn, i = divmod(-b*p, d)
-            return ((i,d,p), (c0, -1 if sgn%2 else 1, l))
+        def add_to_cache(b, d, p, c0):
+            sgn, i = d.__rdivmod__(-b*p) # Same as divmod(-b*p, d)
+            return ((i, d, p), (c0, -1 if sgn%2 else 1, None))
 
         n, e = self.N, self.e
-        one, minusone = ZZ(1), ZZ(-1)
+        zero, one, minusone = ZZ(0), ZZ(1), ZZ(-1)
         if e == 1:
             if d == 1:
-                self.cache.update({(0, 1, p): (minusone, -1, None) for p in prime_range(3, n)})
+                self.cache.update(((zero, one, p), (minusone, minusone, None)) for p in prime_range(3, n))
             else:
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
                         fac = batch_factorial(n, 1, b/d)
-                        self.cache.update(add_to_cache(b,d,p,f,None) for p,f in fac.items()) # inner loop
+                        self.cache.update(add_to_cache(b,d,p,f) for p,f in fac.items()) # inner loop
         else:
             zero_exp = self._expansion_at_0
-            R = ZZ['x']
-            x = R.gen()
             if d == 1:
-                self.cache.update({(0, 1, p): (minusone, -1, s) for p, s in zero_exp.items()})
+                self.cache.update(((zero, one, p), (minusone, minusone, s)) for p, s in zero_exp.items())
             else:
-                Z1 = ZZ(1)
                 for b in srange(1, d//2+1):
                     if gcd(b, d) == 1:
-                        harmonics = {j: batch_harmonic(n, e-j if (j>1 or normalized) else e, 
+                        harmonics = {j: batch_harmonic(n, e-j if j>1 else e, 
                             b/d, j, proj=True) for j in range(1, e)}
                         # Combine the expansion at 0 with the contribution from
                         # harmonic sums, then recenter the log expansion.
-                        # If not normalized, also extract the constant term.
-                        self.cache.update(add_to_cache(b,d,p,
-                            Z1 if normalized else harmonics[1][p][0,1],
-                            gamma_translate(s, p, harmonics, e, b, d, normalized)) 
-                            for p,s in zero_exp.items() if p>d or d%p) # inner loop
+                        self.cache.update(gamma_translate(s, p, harmonics, e, b, d) 
+                                for p,s in zero_exp.items() if p>d or d%p) # inner loop
 
