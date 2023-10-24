@@ -60,9 +60,12 @@ class pAdicLogGammaCache(UniqueRepresentation):
             (-7780, 1, [50, 3492])
         """
         if N > self.N:
-            Nold = self.N
             self.N = N
             if self.e > 1:
+                try:
+                    del self._expansion_at_0
+                except AttributeError:
+                    pass
                 self._expansion_at_0
 
     def clear_cache(self):
@@ -85,9 +88,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
         """
         self.N = self.e + 1
         self.cache = {}
-        if hasattr(self, "_expansion_at_0"):
-            # lazy_attributes store themselves as a normal attribute
+        try:
             del self._expansion_at_0
+        except AttributeError:
+            pass
 
     def save(self, filename):
         """
