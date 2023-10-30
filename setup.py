@@ -8,7 +8,15 @@ from codecs import open  # To open the README file with proper encoding
 from setuptools.command.test import test as TestCommand  # for tests
 from setuptools.extension import Extension
 from sage.env import sage_include_directories
-from Cython.Build import cythonize
+from Cython.Build import cythonize as cython_cythonize
+
+try:
+    from sage.misc.package_dir import cython_namespace_package_support
+    def cythonize(*args, **kwargs):
+        with cython_namespace_package_support():
+            return cython_cythonize(*args, **kwargs)
+except ImportError:
+    cythonize = cython_cythonize
 
 # Get information from separate files (README, VERSION)
 def readfile(filename):
