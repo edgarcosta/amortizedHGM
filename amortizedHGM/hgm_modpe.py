@@ -655,9 +655,12 @@ class AmortizingHypergeometricData(HypergeometricData):
         K = RQ.fraction_field()
 
         M = matrix(K, 2*ei, 2*ei)
+        Mr = [[None for j in range(2*ei)] for i in range(2*ei)]
         # Top left quadrant of M is a scalar matrix.
         for i in range(ei):
             M[i,i] = 1
+            if i>0:
+                Mr[i][i] = (0,0)
         # Bottom left quadrant of M represents the substitution on x.
         for i in range(ei):
             M[ei+i,i] = y*(k-r/d)**(ei-1-i)
@@ -670,6 +673,8 @@ class AmortizingHypergeometricData(HypergeometricData):
         for i in range(ei):
             for j in range(i+1):
                 M[ei+i, ei+j] = E[i-j]
+                if j>0:
+                    Mr[ei+i][ei+j] = (ei+i-j,ei)
 
         # Clear polynomial denominators.
         M = M*lcm(M[i,j].denominator() for i in range(2*ei) for j in range(2*ei))
@@ -689,6 +694,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             for i in range(1,ei+2):
                 V[-i,-i] = 1
 
+        repeated_entries = [-1 if Mr[i][j] is None else Mr[i][j][0]*(2*ei)+Mr[i][j][1] for i in range(2*ei) for j in range(2*ei)]
+
         # Compute the amortized matrix product.
         # We use cutoff to pick out the relevant columns of the product.
         indices = self._prime_range(t, N)[d][pclass]
@@ -697,7 +704,8 @@ class AmortizingHypergeometricData(HypergeometricData):
                          mbound_dict_c(indices, start, end),
                          kbase=1, V=V,
                          indices=indices, ans=ans, projective=True,
-                         cutoff=None if chained else ei)
+                         cutoff=None if chained else ei,
+                         repeated_entries=repeated_entries)
 
     def amortized_padic_H_values_step(self, vectors, t, N, start, pclass, multlifts, debug=False):
         r"""
