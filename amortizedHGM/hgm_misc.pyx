@@ -78,11 +78,15 @@ cpdef multiplicative_lift(t, Integer p, int e, x=Integer(1)):
     cdef int i
     cdef Integer pe = p**e
     cdef Integer tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
+
+    if e == 2: # Shortcut
+        return Integer(1) + (tmp-1).divide_knowing_divisible_by(p)*x
+
     cdef Integer tmp2 = truncated_log_mod(tmp, e, pe).divide_knowing_divisible_by(p)
     cdef Integer tmp4 = tmp2
 
     # Exponentiate to get the desired series.
-    tmp3 = Integer(1)+tmp2*x
+    tmp3 = Integer(1) + tmp2*x
     tmp5 = x
     for i in range(2, e):
         tmp4 = moddiv_int(tmp4*tmp2, Integer(i), p**(e-i))
@@ -340,18 +344,19 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den
                 ans.append((tmp3, tmp1))
     return ans
 
-cpdef Integer hgm_matmult(w, ans, Integer pe1, int s):
+cpdef Integer hgm_matmult(w, ans, Integer p, int e):
     # Computes a matrix multiplication in the innermost loop of the trace formula.
 
     cdef int h1, h2
     cdef Integer tmp = Integer(0), tmp2, tmp3 = Integer(1)
+    cdef Integer pe1 = p_over_1_minus_p(p, e)
 
-    for h2 in range(s):
+    for h2 in range(e):
         tmp2 = Integer(0)
         for h1 in range(h2+1):
             tmp2 += w[h1]*ans[-1-h1,-1-h2]
         tmp += tmp2*tmp3
-        if h2 < s-1:
+        if h2 < e-1:
             tmp3 *= pe1
     return tmp
 

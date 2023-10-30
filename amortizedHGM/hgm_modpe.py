@@ -753,7 +753,8 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Retrieve precomputation results.
         displacements = self.displacements(N, start, pclass)
 
-        d = start.denominator()
+        a, d = start.as_integer_ratio()
+        r = a*(pclass-1) % d
 
         def debug_check():
             print("checking step", start, p, mi, ps1)
@@ -761,7 +762,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         if ei1 == 1: # Abbreviated version of the general case.
             for p in self._prime_range(t, N)[d][pclass]:
-                mi = (start*(p-1)).floor()
+                mi = (a*(p-1)-r).divide_knowing_divisible_by(d)
                 tpow = (t%p).powermod(mi, p) # faster than power_mod(t, mi, p)
                 tmp = y1*(tpow*displacements[p][0]%p)
                 if debug:
@@ -771,7 +772,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 vectors[p] += tmp
         else:
             for p in self._prime_range(t, N)[d][pclass]:
-                mi = (start*(p-1)).floor()
+                mi = (a*(p-1)-r).divide_knowing_divisible_by(d)
                 pe = p**ei1
                 tpow = (t%pe).powermod(mi, pe) * multlifts[p](mi*p_over_1_minus_p(p, e))
                 tmp = y1*(tpow*displacements[p][0]%pe)
@@ -836,8 +837,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             return
         ei = e-ps
 
-        d = start.denominator()
-        r = start.numerator()*(pclass-1) % d
+        a, d = start.as_integer_ratio()
+        r = a*(pclass-1) % d
 
         # Retrieve precomputed values.
         displacements = self.displacements(N, start, pclass)
@@ -855,8 +856,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             for p, tmp in ans.items(): #inner loop
                 w = displacements[p][1]
                 mi = (start*(p-1)).floor()
-                tpow = (t%p).powermod(mi+1, p) # faster than power_mod(t, mi, p)
-                tmp2 = moddiv_int(tpow*w*tmp[-1,0], tmp[0,-1], p)
+                w0 = (t%p).powermod(mi+1, p) # faster than power_mod(t, mi, p)
+                tmp2 = moddiv_int(w0*w*tmp[-1,0], tmp[0,-1], p)
                 if debug:
                     debug_check()
                 if ps:
@@ -864,19 +865,18 @@ class AmortizingHypergeometricData(HypergeometricData):
                 vectors[p] += tmp2
         else:
             for p, tmp in ans.items(): #inner loop
-                p_minus_1 = p-1
                 w0, w = displacements[p][1]
-                mi = (start*p_minus_1).floor()
-                pe = p**ei
-                pe1 = p_over_1_minus_p(p, ei)
+                mi = (a*(p-1)-r).divide_knowing_divisible_by(d)
 
                 # Compute the c_{i,h}(p) by combining precomputed values with [z]^{mi+1}.
-                arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, -d*p_minus_1, p**(ei-1)))
-                tpow = w0 * (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
+                pe = p if ei==2 else p**(ei-1)
+                arg = -a*p*d.inverse_mod(pe)
+                pe *= p
+                w0 *= (t%pe).powermod(mi+1, pe) * multlifts[p](arg)
                 w = w.multiplication_trunc(multlifts[p], ei)
 
                 # Compute the sum using a matrix multiplication implemented directly in Cython.
-                tmp2 = moddiv_int(tpow*hgm_matmult(w, tmp, pe1, ei), tmp[0,-1], pe)
+                tmp2 = moddiv_int(w0*hgm_matmult(w, tmp, p, ei), tmp[0,-1], pe)
 
                 if debug:
                     debug_check()
@@ -954,10 +954,10 @@ class AmortizingHypergeometricData(HypergeometricData):
                 if d.gcd(pclass) == 1:
                     if chained: # Forces e==1
                         # Construct the matrix T_i.
-                        Ti = self.amortized_padic_H_values_ferry(t, start, pclass)
+                        T_i = self.amortized_padic_H_values_ferry(t, start, pclass)
                         # Update vectors by multiplying by T_i*S_i(p).
                         y, ps = self.interval_mults[start]
-                        self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=Ti, ans=vectors, chained=True)
+                        self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=T_i, ans=vectors, chained=True)
                     else:
                         # Update vectors with P'_{m_i}.
                         self.amortized_padic_H_values_step(vectors, t, N, start, pclass, multlifts, debug)
