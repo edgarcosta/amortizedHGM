@@ -1098,9 +1098,15 @@ class AmortizingHypergeometricData(HypergeometricData):
         import resource
         def get_utime():
             return resource.getrusage(resource.RUSAGE_SELF).ru_utime
+
+        def report(res, name, t):
+            res[name] = t
+            print(f"{name}: {t:.2f} s")
         e = self.e
 
+        res = {}
         for i in range(12,log2N + 1):
+            res[i] = {}
             self.gammas_cache.clear_cache()
             self.displacements.clear_cache()
             self.zero_offsets = {}
@@ -1110,7 +1116,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if e>1 or chained is False:
                 start = get_utime()
                 self.precompute_gammas(2**i, chained=False)
-                print("Amortized Gamma: %.2f s" % (get_utime()-start))
+                report(res[i], "Amortized gamma", get_utime() - start)
                 if extra_cache:
                     start = get_utime()
                     for (s, _) in self.truncated_starts_ends():
@@ -1118,16 +1124,17 @@ class AmortizingHypergeometricData(HypergeometricData):
                         for pclass in range(d):
                             if gcd(d, pclass) == 1:
                                 self.displacements(2**i, s, pclass)
-                    print("Additional precomputation: %.2f s" % (get_utime()-start))
+
+                    report(res[i], "Additional precomputation", get_utime()-start)
             start = get_utime()
             foo = self.amortized_padic_H_values(t, 2**i, chained, debug=debug)
-            print("Amortized HG: %.2f s" % (get_utime()-start))
+            report(res[i], "Amortized HG", get_utime() - start)
             self.gammas_cache.clear_cache()
             #print_maxrss()
             if vssage:
                 start = get_utime()
                 bar = {p: self.padic_H_value(p=p,f=1,t=t,prec=e) for p in foo}
-                print("Sage:      %.2f s" % (get_utime()-start))
+                report(res[i], "Sage", get_utime() - start)
                 self._gauss_table = {}
                 self.padic_H_value.clear_cache()
                 #print_maxrss()
@@ -1139,7 +1146,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 z = 1/t
                 start_magma = magma.Cputime()
                 magma.eval('foo := [HypergeometricTrace(H, %s, p) : p in ps];' % z)
-                print("Magma:     %.2f s" % (magma.Cputime(start_magma)))
+                report(res[i], "Magma", magma.Cputime(start_magma))
                 bar = dict((p, k) for p,k in zip(sorted(foo), eval(magma.eval('foo;'))))
                 assert all(foo[p] % p**e == bar[p] % p**e for p in foo if p in bar)
             if higher_powers_sage or higher_powers_magma:
@@ -1154,7 +1161,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if higher_powers_sage:
                 start = get_utime()
                 bar2 = {q: self.padic_H_value(p=p,f=f,t=t,prec=e) for (q,p,f) in foo2}
-                print("Sage higher powers:      %.2f s" % (get_utime()-start))
+                report(res[i], "Sage higher powers", get_utime() - start)
                 self._gauss_table = {}
                 self.padic_H_value.clear_cache()
             if higher_powers_magma:
@@ -1164,9 +1171,11 @@ class AmortizingHypergeometricData(HypergeometricData):
                 z = 1/t
                 start_magma = magma.Cputime()
                 magma.eval('foo2 := [HypergeometricTrace(H, %s, p) : p in ps];' % z)
-                print("Magma higher powers:     %.2f s" % (magma.Cputime(start_magma)))
+                report(res[i], "Magma higher powers", magma.Cputime(start_magma))
                 if higher_powers_sage:
                     bar2 = dict((q, k) for q,k in zip(sorted(foo2), eval(magma.eval('foo2;'))))
                     assert all(foo2[q] == bar2[q]  for q in foo if q in bar2)
             print("")
+
+        return res
 
