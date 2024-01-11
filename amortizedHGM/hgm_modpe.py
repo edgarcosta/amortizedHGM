@@ -1055,7 +1055,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Ask Magma to check the functional equation.
         return LSmagma.CFENew()
 
-    def compare(self, log2N, t, chained=None, vssage=True, vsmagma=True, higher_powers_sage=False, higher_powers_magma=False, extra_cache=True, debug=False):
+    def compare(self, log2N, t, log2N_start=12, chained=None, vssage=True, vsmagma=True, higher_powers_sage=False, higher_powers_magma=False, extra_cache=True, debug=False):
         r"""
         INPUT:
 
@@ -1105,7 +1105,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         e = self.e
 
         res = {}
-        for i in range(12,log2N + 1):
+        for i in range(log2N_start, log2N + 1):
             res[i] = {}
             self.gammas_cache.clear_cache()
             self.displacements.clear_cache()
