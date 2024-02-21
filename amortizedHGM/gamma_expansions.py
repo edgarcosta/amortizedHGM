@@ -58,9 +58,22 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache.increase_N(100)
             sage: cache.expansion((3,4,97))
             (-7780, 1, [50, 3492])
+            
+        Check that the cache is properly extended after enlarging `N`::
+        
+            sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
+            sage: cache = pAdicLogGammaCache(2)
+            sage: cache.clear_cache()
+            sage: cache.increase_N(20)
+            sage: cache._expansion_at_0[17]
+            [-5, 0]
+            sage: cache.increase_N(40)
+            sage: cache._expansion_at_0[37]
+            [-7, 0]
         """
         if N > self.N:
             Nold = self.N
+            self.clear_cache()
             self.N = N
             if self.e > 1:
                 self._expansion_at_0
