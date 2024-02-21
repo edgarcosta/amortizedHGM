@@ -916,6 +916,17 @@ class AmortizingHypergeometricData(HypergeometricData):
             23
             sage: traces[23] == H.padic_H_value(23, 1, t)
             True
+
+        TESTS:
+
+        Check that the cache is properly extended after enlarging `N`::
+
+            sage: from amortizedHGM import AmortizingHypergeometricData
+            sage: H = AmortizingHypergeometricData(cyclotomic=([5], [1,1,1,1]))
+            sage: traces = H.amortized_padic_H_values(2, 2**13)
+            sage: traces2 = H.amortized_padic_H_values(2, 2**14)
+            sage: traces[4099] == traces2[4099]
+            True
         """
         if self.swap is not None:
             return self.swap.amortized_padic_H_values(1/t, N, chained, debug)
