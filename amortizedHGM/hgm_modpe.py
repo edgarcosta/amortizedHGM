@@ -1,13 +1,12 @@
 from tmpfile import NamedTemporaryFile
-import array
 
 from sage.arith.functions import lcm
-from sage.arith.misc import GCD as gcd
-from sage.arith.misc import power_mod
-from sage.arith.misc import previous_prime
+from sage.arith.misc import (
+    GCD as gcd,
+    power_mod
+)
 from sage.functions.log import exp
 from sage.functions.other import (
-    binomial,
     ceil,
     factorial,
     frac,
@@ -16,9 +15,11 @@ from sage.interfaces.magma import magma
 from sage.matrix.constructor import matrix
 from sage.matrix.special import identity_matrix
 from sage.misc.cachefunc import cached_method
+from sage.misc.functional import log
 from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.misc_c import prod
 from sage.modular.hypergeometric_motive import HypergeometricData
+from sage.rings.big_oh import O
 from sage.rings.finite_rings.integer_mod_ring import IntegerModRing
 from sage.rings.integer_ring import ZZ
 from sage.rings.padics.factory import Qp
@@ -175,7 +176,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             self.break_mults_p1[brk] = (sign, ps)
 
         if e is None:
-            e = self.weight()//2 + 1
+            e = self.weight()//2 + 1 # = ceil((1 + w)/2)
         self.e = e
         self.gammas_cache = pAdicLogGammaCache(e)
         self.zero_offsets = {}
@@ -408,7 +409,6 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: H.gamma_denoms()
             {1, 2, 4, 5, 7, 20, 28, 35}
         """
-        e = self.e
         dens = set([1])
         for (start, _) in self.truncated_starts_ends():
             d = start.denominator()
@@ -917,6 +917,17 @@ class AmortizingHypergeometricData(HypergeometricData):
             23
             sage: traces[23] == H.padic_H_value(23, 1, t)
             True
+
+        TESTS:
+
+        Check that the cache is properly extended after enlarging `N`::
+
+            sage: from amortizedHGM import AmortizingHypergeometricData
+            sage: H = AmortizingHypergeometricData(cyclotomic=([5], [1,1,1,1]))
+            sage: traces = H.amortized_padic_H_values(2, 2**13)
+            sage: traces2 = H.amortized_padic_H_values(2, 2**14)
+            sage: traces[4099] == traces2[4099]
+            True
         """
         if self.swap is not None:
             return self.swap.amortized_padic_H_values(1/t, N, chained, debug)
@@ -1055,20 +1066,32 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Ask Magma to check the functional equation.
         return LSmagma.CFENew()
 
-    def compare(self, log2N, t, chained=None, vssage=True, vsmagma=True, higher_powers_sage=False, higher_powers_magma=False, extra_cache=True, debug=False):
+    def compare(
+            self,
+            log2N,
+            t,
+            log2N_start=12,
+            chained=None,
+            log2N_sage=0,
+            log2N_magma=0,
+            log2N_higher_powers_sage=0,
+            log2N_higher_powers_magma=0,
+            extra_cache=True,
+            verbose=True,
+            debug=False):
         r"""
         INPUT:
 
         - ``log2N`` -- a positive integer, at least 12.  Computes traces for
-          log_2(N) from 12 up to this bound.
+          log_2(N) from `log2N_start` up to this bound.
         - ``t`` -- a rational number, the parameter for the hypergeometric motive
         - ``chained`` -- boolean, whether to use the algorithm from [CKR20], rather than the
           newer algorithm from [CKR23].  Defaults to True for e=1 and False otherwise.
-        - ``vssage`` -- whether to compare to Sage's implementation of the trace formula
-        - ``vsmagma`` -- whether to compare to Magma's implementation of the trace formula
-        - ``higher_powers_sage`` -- whether to time the computation of prime powers up to N
+        - ``log2N_sage`` -- upper bound log_2(N) where we compare against Sage's implementation of the trace formula
+        - ``log2N_magma`` -- upper bound log_2(N) where we compare against Magma's implementation of the trace formula
+        - ``log2N_higher_powers_sage`` -- whether to time the computation of prime powers up to N
           using Sage
-        - ``higher_powers_magma`` -- whether to time the computation of prime powers up to N
+        - ``log2N_higher_powers_magma`` -- whether to time the computation of prime powers up to N
           using Magma
         - ``extra_cache`` -- whether to time the computation of the displacements from the
           stored p-adic gamma values
@@ -1078,39 +1101,56 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: H = AmortizingHypergeometricData(cyclotomic=([4,4,2,2], [3,3,3]))
             sage: H.compare(14, 1337, vssage=False) #random
             2^12
-            Amortized Gamma: 0.26 s
-            Additional precomputation: 0.05 s
-            Amortized HG: 0.08 s
-            Magma:     2.20 s
+            Amortized Gamma: 0.04 s
+            Additional precomputation: 0.02 s
+            Amortized HG: 0.04 s
 
             2^13
-            Amortized Gamma: 0.16 s
-            Additional precomputation: 0.09 s
-            Amortized HG: 0.08 s
-            Magma:     8.59 s
+            Amortized Gamma: 0.09 s
+            Additional precomputation: 0.03 s
+            Amortized HG: 0.04 s
 
             2^14
-            Amortized Gamma: 0.32 s
-            Additional precomputation: 0.17 s
-            Amortized HG: 0.21 s
-            Magma:     31.02 s
+            Amortized Gamma: 0.08 s
+            Additional precomputation: 0.04 s
+            Amortized HG: 0.06 s
+
+            {12: {'Amortized Gamma': 0.040715999999999974,
+              'Additional precomputation': 0.015135999999999927,
+              'Amortized HG': 0.043184},
+             13: {'Amortized Gamma': 0.09205699999999983,
+              'Additional precomputation': 0.025457000000000063,
+              'Amortized HG': 0.03719500000000009},
+             14: {'Amortized Gamma': 0.08010300000000004,
+              'Additional precomputation': 0.04140199999999994,
+              'Amortized HG': 0.05902000000000007}}
         """
         import resource
         def get_utime():
             return resource.getrusage(resource.RUSAGE_SELF).ru_utime
+
+
+        def report(res, name, t):
+            res[name] = t
+            if verbose:
+                print(f"{name}: {t:.2f} s")
+
         e = self.e
 
-        for i in range(12,log2N + 1):
+        res = {}
+        for i in range(log2N_start, log2N + 1):
+            res[i] = {}
             self.gammas_cache.clear_cache()
             self.displacements.clear_cache()
             self.zero_offsets = {}
             # Don't worry about clearing caches for basic things like
             # truncated_starts_ends, _start_to_rationals, _numden_factors, gamma_denoms
-            print("2^%s" % i)
+            if verbose:
+                print("2^%s" % i)
             if e>1 or chained is False:
                 start = get_utime()
                 self.precompute_gammas(2**i, chained=False)
-                print("Amortized Gamma: %.2f s" % (get_utime()-start))
+                report(res[i], "Amortized Gamma", get_utime() - start)
                 if extra_cache:
                     start = get_utime()
                     for (s, _) in self.truncated_starts_ends():
@@ -1118,31 +1158,30 @@ class AmortizingHypergeometricData(HypergeometricData):
                         for pclass in range(d):
                             if gcd(d, pclass) == 1:
                                 self.displacements(2**i, s, pclass)
-                    print("Additional precomputation: %.2f s" % (get_utime()-start))
+
+                    report(res[i], "Additional precomputation", get_utime()-start)
             start = get_utime()
             foo = self.amortized_padic_H_values(t, 2**i, chained, debug=debug)
-            print("Amortized HG: %.2f s" % (get_utime()-start))
+            report(res[i], "Amortized HG" if (e>1 or chained is False) else "Chained", get_utime() - start)
             self.gammas_cache.clear_cache()
-            #print_maxrss()
-            if vssage:
+            if i <= log2N_sage:
                 start = get_utime()
                 bar = {p: self.padic_H_value(p=p,f=1,t=t,prec=e) for p in foo}
-                print("Sage:      %.2f s" % (get_utime()-start))
+                report(res[i], "Sage (p)", get_utime() - start)
                 self._gauss_table = {}
                 self.padic_H_value.clear_cache()
-                #print_maxrss()
                 assert all(foo[p] % p**e == bar[p] % p**e for p in foo if p in bar)
-            if vsmagma:
+            if i <= log2N_magma:
                 magma.quit()
                 magma.eval('ps := %s;' % sorted(foo))
                 magma.eval('H := HypergeometricData(%s, %s);' % self.alpha_beta())
                 z = 1/t
                 start_magma = magma.Cputime()
                 magma.eval('foo := [HypergeometricTrace(H, %s, p) : p in ps];' % z)
-                print("Magma:     %.2f s" % (magma.Cputime(start_magma)))
+                report(res[i], "Magma (p)", float(magma.Cputime(start_magma)))
                 bar = dict((p, k) for p,k in zip(sorted(foo), eval(magma.eval('foo;'))))
                 assert all(foo[p] % p**e == bar[p] % p**e for p in foo if p in bar)
-            if higher_powers_sage or higher_powers_magma:
+            if i <= log2N_higher_powers_sage or i <= log2N_higher_powers_magma:
                 s = set(self.wild_primes())
                 m = QQ(t).numerator()*QQ(t).denominator()*QQ(t-1).numerator()
                 foo2 = []
@@ -1151,22 +1190,24 @@ class AmortizingHypergeometricData(HypergeometricData):
                     p, f = ZZ(q).is_prime_power(get_data=True)
                     if f > 1 and f <= n and p not in s and m%p:
                         foo2.append((q,p,f))
-            if higher_powers_sage:
+            if i <= log2N_higher_powers_sage:
                 start = get_utime()
                 bar2 = {q: self.padic_H_value(p=p,f=f,t=t,prec=e) for (q,p,f) in foo2}
-                print("Sage higher powers:      %.2f s" % (get_utime()-start))
+                report(res[i], "Sage (q)", get_utime() - start)
                 self._gauss_table = {}
                 self.padic_H_value.clear_cache()
-            if higher_powers_magma:
+            if i <= log2N_higher_powers_magma:
                 magma.quit()
                 magma.eval('ps := %s;' % sorted([q for (q,p,f) in foo2]))
                 magma.eval('H := HypergeometricData(%s, %s);' % self.alpha_beta())
                 z = 1/t
                 start_magma = magma.Cputime()
                 magma.eval('foo2 := [HypergeometricTrace(H, %s, p) : p in ps];' % z)
-                print("Magma higher powers:     %.2f s" % (magma.Cputime(start_magma)))
-                if higher_powers_sage:
+                report(res[i], "Magma (q)", float(magma.Cputime(start_magma)))
+                if i <= log2N_higher_powers_sage:
                     bar2 = dict((q, k) for q,k in zip(sorted(foo2), eval(magma.eval('foo2;'))))
                     assert all(foo2[q] == bar2[q]  for q in foo if q in bar2)
             print("")
+
+        return res
 
