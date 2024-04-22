@@ -1,3 +1,4 @@
+from tmpfile import NamedTemporaryFile
 import array
 
 from sage.arith.functions import lcm
@@ -970,8 +971,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         zero_offsets = self.zero_offsets[N]
         return {p: moddiv_int(tmp, (1-p)*zero_offsets[p], p**e) for p, tmp in vectors.items()}
 
-    def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):
-        # TODO: improve this (Edgar)
+   def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):
         r"""
         This is experimental!
 
@@ -988,7 +988,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         if verbose:
             print("Created Magma hypergeometric data")
 
-        wild_primes = set(H.wild_primes())
+        wild_primes = set(self.wild_primes())
 
         # Collect prime Frobenius traces.
         prime_traces = self.amortized_padic_H_values(t, N, chained=chained)
@@ -999,7 +999,6 @@ class AmortizingHypergeometricData(HypergeometricData):
         m = QQ(t).numerator()*QQ(t).denominator()*QQ(t-1).numerator()
         n = self.degree()
         tmp = []
-
         for q in range(N):
             p, f = ZZ(q).is_prime_power(get_data=True)
             if f > 1 and f <= n and p not in wild_primes and m%p:
@@ -1026,7 +1025,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         bad_euler_factors = bad_factors if bad_factors else {}
 
         # Write Euler factors to a temporary file to be read in my Magma.
-        with open("/tmp/eulerfactors.m", "w") as f:
+        with NamedTemporaryFile(delete_on_close=False) as f:
             f.write("P<T> := PolynomialRing(Integers());\n");
             f.write("EF := [")
             comma = False
@@ -1038,11 +1037,12 @@ class AmortizingHypergeometricData(HypergeometricData):
             for p,b in bad_euler_factors.items():
                 f.write(",<{},{},{}>".format(p,b[0],b[1]))
             f.write("];")
-        if verbose:
-            print("Wrote good Euler factors to file")
+            f.close()
+            if verbose:
+                print("Wrote good Euler factors to file")
 
-        # Use Magma to read the temporary file.
-        magma.load("/tmp/eulerfactors.m")
+            # Use Magma to read the temporary file.
+            magma.load(fp.name)
         euler_factors_magma = magma("EF")
         if verbose:
             print("Loaded good Euler factors into Magma")
