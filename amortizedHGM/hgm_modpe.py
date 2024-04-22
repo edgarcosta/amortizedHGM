@@ -1089,22 +1089,29 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: H = AmortizingHypergeometricData(cyclotomic=([4,4,2,2], [3,3,3]))
             sage: H.compare(14, 1337, vssage=False) #random
             2^12
-            Amortized Gamma: 0.26 s
-            Additional precomputation: 0.05 s
-            Amortized HG: 0.08 s
-            Magma:     2.20 s
+            Amortized Gamma: 0.04 s
+            Additional precomputation: 0.02 s
+            Amortized HG: 0.04 s
 
             2^13
-            Amortized Gamma: 0.16 s
-            Additional precomputation: 0.09 s
-            Amortized HG: 0.08 s
-            Magma:     8.59 s
+            Amortized Gamma: 0.09 s
+            Additional precomputation: 0.03 s
+            Amortized HG: 0.04 s
 
             2^14
-            Amortized Gamma: 0.32 s
-            Additional precomputation: 0.17 s
-            Amortized HG: 0.21 s
-            Magma:     31.02 s
+            Amortized Gamma: 0.08 s
+            Additional precomputation: 0.04 s
+            Amortized HG: 0.06 s
+
+            {12: {'Amortized Gamma': 0.040715999999999974,
+              'Additional precomputation': 0.015135999999999927,
+              'Amortized HG': 0.043184},
+             13: {'Amortized Gamma': 0.09205699999999983,
+              'Additional precomputation': 0.025457000000000063,
+              'Amortized HG': 0.03719500000000009},
+             14: {'Amortized Gamma': 0.08010300000000004,
+              'Additional precomputation': 0.04140199999999994,
+              'Amortized HG': 0.05902000000000007}}
         """
         import resource
         def get_utime():
