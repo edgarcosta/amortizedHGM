@@ -1,12 +1,10 @@
-import array
-
 from sage.arith.functions import lcm
-from sage.arith.misc import GCD as gcd
-from sage.arith.misc import power_mod
-from sage.arith.misc import previous_prime
+from sage.arith.misc import (
+    GCD as gcd,
+    power_mod
+)
 from sage.functions.log import exp
 from sage.functions.other import (
-    binomial,
     ceil,
     factorial,
     frac,
@@ -15,9 +13,11 @@ from sage.interfaces.magma import magma
 from sage.matrix.constructor import matrix
 from sage.matrix.special import identity_matrix
 from sage.misc.cachefunc import cached_method
+from sage.misc.functional import log
 from sage.misc.lazy_attribute import lazy_attribute
 from sage.misc.misc_c import prod
 from sage.modular.hypergeometric_motive import HypergeometricData
+from sage.rings.big_oh import O
 from sage.rings.finite_rings.integer_mod_ring import IntegerModRing
 from sage.rings.integer_ring import ZZ
 from sage.rings.padics.factory import Qp
@@ -407,7 +407,6 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: H.gamma_denoms()
             {1, 2, 4, 5, 7, 20, 28, 35}
         """
-        e = self.e
         dens = set([1])
         for (start, _) in self.truncated_starts_ends():
             d = start.denominator()
@@ -988,7 +987,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         if verbose:
             print("Created Magma hypergeometric data")
 
-        wild_primes = set(H.wild_primes())
+        wild_primes = set(self.wild_primes())
 
         # Collect prime Frobenius traces.
         prime_traces = self.amortized_padic_H_values(t, N, chained=chained)
@@ -1107,7 +1106,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             Amortized HG: 0.21 s
             Magma:     31.02 s
         """
-
+        import resource
         def get_utime():
             return resource.getrusage(resource.RUSAGE_SELF).ru_utime
 
