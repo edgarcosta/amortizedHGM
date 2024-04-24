@@ -227,8 +227,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             del tmp[-1]
         return tmp
 
-    @staticmethod
-    def tame_primes(t):
+    @cached_method
+    def tame_primes(self, t):
         r"""
         Given `t`, construct the set of primes at which every hypergeometric motive
         with parameter `t` has bad reduction.
@@ -239,19 +239,21 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         OUTPUT:
 
-        The set of primes dividing the numerator or denominator of `t` or `t-1`.
+        The set of primes dividing the numerator or denominator of `t` or `t-1` which are not wild primes.
 
         EXAMPLES::
 
             sage: from amortizedHGM import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]))
             sage: H.tame_primes(380/117)
-            {2, 3, 5, 13, 19, 263}
+            {3, 13, 19, 263}
         """
         s = set()
+        wild_primes = self.wild_primes()
         for m in (t, ~t, t-1):
             for p in m.numerator().prime_divisors():
-                s.add(p)
+                if p not in wild_primes:
+                    s.add(p)
         return s
 
     @cached_method
@@ -981,6 +983,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             return {p: moddiv_int(mat[1,0], mat[0,0], p) for p, mat in vectors.items()}
         zero_offsets = self.zero_offsets[N]
         return {p: moddiv_int(tmp, (1-p)*zero_offsets[p], p**e) for p, tmp in vectors.items()}
+    
 
    def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):
         r"""
