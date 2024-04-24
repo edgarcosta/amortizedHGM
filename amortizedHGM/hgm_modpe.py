@@ -237,14 +237,14 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         OUTPUT:
 
-        The set of primes dividing the numerator or denominator of `t` or `t-1`.
+        The set of primes dividing the numerator or denominator of `t` or `t-1` which are not wild primes.
 
         EXAMPLES::
 
             sage: from amortizedHGM import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]))
             sage: H.tame_primes(380/117)
-            {2, 3, 5, 13, 19, 263}
+            {3, 13, 19, 263}
         """
         s = set()
         wild_primes = self.wild_primes()
