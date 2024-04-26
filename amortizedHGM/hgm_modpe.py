@@ -1,4 +1,4 @@
-from tmpfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile
 
 from sage.arith.functions import lcm
 from sage.arith.misc import (
@@ -152,7 +152,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             self.swap = None
         self.denom = lcm(i for j in self.cyclotomic_data() for i in j)
 
-        self.breaks = breaks = sorted(set(alpha + beta + [QQ(0), QQ(1)]))
+        self.breaks = breaks = [QQ(x) for x in sorted(set(alpha + beta + [0, 1]))]
         self.starts = starts = breaks[:-1]
         self.ends = ends = breaks[1:]
         xi = beta.count(0)
@@ -983,9 +983,8 @@ class AmortizingHypergeometricData(HypergeometricData):
             return {p: moddiv_int(mat[1,0], mat[0,0], p) for p, mat in vectors.items()}
         zero_offsets = self.zero_offsets[N]
         return {p: moddiv_int(tmp, (1-p)*zero_offsets[p], p**e) for p, tmp in vectors.items()}
-    
 
-   def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):
+    def check_functional_equation(self, t, N, bad_factors=None, chained=None, verbose=False):
         r"""
         This is experimental!
 
