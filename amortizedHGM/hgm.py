@@ -729,7 +729,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             indices = self._prime_range(t)[d][pclass]
             remainder_forest(M,
                              lambda p: p, #lambda p: mbound_c(p,start,end),
-                             mbound_dict_c(indices, start, end),
+                             mbound_dict_c(indices, QQ(start), QQ(end)),
                              kbase=1,
                              indices=indices,
                              V=fixbreak,
