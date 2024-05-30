@@ -1079,7 +1079,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             log2N_higher_powers_sage=0,
             log2N_higher_powers_magma=0,
             extra_cache=True,
-            verbose=True,
+            verbose=False,
             debug=False):
         r"""
         INPUT:
@@ -1101,7 +1101,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         EXAMPLES::
 
             sage: H = AmortizingHypergeometricData(cyclotomic=([4,4,2,2], [3,3,3]))
-            sage: H.compare(14, 1337, vssage=False) #random
+            sage: H.compare(14, 1337, vssage=False, verbose=True) #random
             2^12
             Amortized Gamma: 0.04 s
             Additional precomputation: 0.02 s
@@ -1209,7 +1209,10 @@ class AmortizingHypergeometricData(HypergeometricData):
                 if i <= log2N_higher_powers_sage:
                     bar2 = dict((q, k) for q,k in zip(sorted(foo2), eval(magma.eval('foo2;'))))
                     assert all(foo2[q] == bar2[q]  for q in foo if q in bar2)
-            print("")
+            if verbose:
+                print("")
 
         return res
+
+
 
