@@ -75,10 +75,9 @@ if __name__ == "__main__":
     ]
     t = ZZ(314) / 159
     compare_parameters = [
-        {"log2N": 17, "t": t, "log2N_sage": 14, "log2N_magma": 14},
-        {"log2N": 27, "t": t, "log2N_sage": 17, "log2N_magma": 17},
+        {"log2N": 25, "t": t, "log2N_sage": 17, "log2N_magma": 17},
         {
-            "log2N": 25,
+            "log2N": 23,
             "t": t,
             "log2N_sage": 17,
             "log2N_magma": 17,
@@ -98,7 +97,7 @@ if __name__ == "__main__":
             "t": t,
             "log2N_sage": 15,
             "log2N_magma": 17,
-            "log2N_higher_powers_sage": 24,
+            "log2N_higher_powers_sage": 23,
             "log2N_higher_powers_magma": 22,
         },
         {
