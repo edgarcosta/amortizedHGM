@@ -58,7 +58,7 @@ def generate_row_latex(cyclotomic, compare_parameter, columns=11):
                     r = f"{int(n)}"
                 line.append(r)
         if len(line) > 1:
-            lines.append(" & ".join(line)))
+            lines.append(" & ".join(line))
             lines.append("\\")
         if k in ["Chained", "Amortized HG", "Magma (p)"]:
             lines.append(r"\hline")
