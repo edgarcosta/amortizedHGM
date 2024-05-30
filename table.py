@@ -12,7 +12,7 @@ def generate_row(cyclotomic, compare_parameter):
     H = AmortizingHypergeometricData(cyclotomic=cyclotomic)
     times = H.compare(**compare_parameter)
     if H.e == 1:
-        times2 = compare(H, log2N=p["log2N"], t=p["t"], chained=False)
+        times2 = H.compare(log2N=p["log2N"], t=p["t"], chained=False)
         for i, v in times2.items():
             for n, t in v.items():
                 times[i][n] = t
