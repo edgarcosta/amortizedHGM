@@ -1169,7 +1169,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             foo = self.amortized_padic_H_values(t, 2**i, chained, debug=debug)
             report(res[i], title, get_utime() - start)
             if e>1 or chained is False:
-                report(res[i], "Total", sum([res[i][k] for k in ["Amortized Gamma", "Additional precomputation", "Amortized HG"])
+                report(res[i], "Total", sum([res[i][k] for k in ["Amortized Gamma", "Additional precomputation", "Amortized HG"]))
 
             self.gammas_cache.clear_cache()
             if i <= log2N_sage:

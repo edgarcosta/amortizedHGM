@@ -44,7 +44,7 @@ def generate_row_latex(cyclotomic, compare_parameter, columns=11):
         "Magma (q)": r"\Magma ($q$)",
     }
     for k, v in keys.items():
-        if k == "Total":
+        if v == "Total":
             lines.append(r"\hdashline")
         line = [v]
         for i in exponents:
