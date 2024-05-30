@@ -84,4 +84,4 @@ sage: H.compare(12, 314/159, vssage=True, vsmagma=False) # timings may vary
 
 # Timings
 
-To recreate the timings in Table 1 of the paper, run `./table.py`; it will print latex to generate the table.
+To recreate the timings in Table 1 of the paper, run `sage table.py`; it will print latex to generate the table.
