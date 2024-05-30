@@ -74,14 +74,14 @@ sage: from amortizedHGM import AmortizingHypergeometricData # the version of the
 sage: H = AmortizingHypergeometricData(cyclotomic=[[3,3],[2,1,1,1]])
 sage: H.weight()
  2
-sage: H.compare(12, 314/159, vssage=True, vsmagma=False) # timings may vary
- 2^12
- Amortized Gamma: 0.09 s
- Additional precomputation: 0.04 s
- Amortized HG: 0.07 s
- Sage:      18.23 s
+sage: _ = H.compare(12, 314/159, log2N_sage=12, verbose=True)
+2^12
+Amortized Gamma: 0.02 s
+Additional precomputation: 0.01 s
+Amortized HG: 0.04 s
+Sage (p): 7.28 s
  ```
 
 # Timings
 
-To recreate the timings in Table 1 of the paper, run `sage table.py`; it will print latex to generate the table.
+To recreate the timings in Table 1 of the paper, run `sage -python amortizedHGM/generate_table_paper.py`; it will print latex to generate the table.
