@@ -1150,6 +1150,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if verbose:
                 print("2^%s" % i)
             if e>1 or chained is False:
+                title = "Amortized HG"
                 start = get_utime()
                 self.precompute_gammas(2**i, chained=False)
                 report(res[i], "Amortized Gamma", get_utime() - start)
@@ -1162,9 +1163,14 @@ class AmortizingHypergeometricData(HypergeometricData):
                                 self.displacements(2**i, s, pclass)
 
                     report(res[i], "Additional precomputation", get_utime()-start)
+            else:
+                title = "Chained"
             start = get_utime()
             foo = self.amortized_padic_H_values(t, 2**i, chained, debug=debug)
-            report(res[i], "Amortized HG" if (e>1 or chained is False) else "Chained", get_utime() - start)
+            report(res[i], title, get_utime() - start)
+            if e>1 or chained is False:
+                report(res[i], "Total", sum([res[i][k] for k in ["Amortized Gamma", "Additional precomputation", "Amortized HG"])
+
             self.gammas_cache.clear_cache()
             if i <= log2N_sage:
                 start = get_utime()

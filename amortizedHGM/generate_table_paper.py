@@ -37,12 +37,15 @@ def generate_row_latex(cyclotomic, compare_parameter, columns=11):
         "Amortized Gamma": "Phase (1)",
         "Additional precomputation": "Phase (2)",
         "Amortized HG": "Phase (3)",
+        "Total": "Total",
         "Sage (p)": r"\Sage ($p$)",
         "Magma (p)": r"\Magma ($p$)",
         "Sage (q)": r"\Sage ($q$)",
         "Magma (q)": r"\Magma ($q$)",
     }
     for k, v in keys.items():
+        if k == "Total":
+            lines.append(r"\hdashline")
         line = [v]
         for i in exponents:
             if k in t[i]:
@@ -55,7 +58,8 @@ def generate_row_latex(cyclotomic, compare_parameter, columns=11):
                     r = f"{int(n)}"
                 line.append(r)
         if len(line) > 1:
-            lines.append(" & ".join(line) + r"\\")
+            lines.append(" & ".join(line)))
+            lines.append("\\")
         if k in ["Chained", "Amortized HG", "Magma (p)"]:
             lines.append(r"\hline")
         if k == "Magma (q)":
