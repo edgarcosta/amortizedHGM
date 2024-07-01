@@ -250,7 +250,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         """
         s = set()
         wild_primes = self.wild_primes()
-        for m in (t, ~t, t-1):
+        for m in (t, ~t):
             for p in m.numerator().prime_divisors():
                 if p not in wild_primes:
                     s.add(p)
@@ -294,7 +294,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Exclude other small primes to avoid edge cases.
         d = max(i.denominator() for i in self._alpha + self._beta)
         t = QQ(t)
-        m = t.numerator()*t.denominator()*(t-1).numerator()
+        m = t.numerator()*t.denominator()
         lower_bound = max(self.e+1, d*(d-1)+1)
         return prime_range_by_residues(lower_bound, N, ds, m, s)
 
@@ -1101,7 +1101,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         EXAMPLES::
 
             sage: H = AmortizingHypergeometricData(cyclotomic=([4,4,2,2], [3,3,3]))
-            sage: H.compare(14, 1337, vssage=False, verbose=True) #random
+            sage: H.compare(14, 1337, log2N_sage=False, verbose=True) #random
             2^12
             Amortized Gamma: 0.04 s
             Additional precomputation: 0.02 s
