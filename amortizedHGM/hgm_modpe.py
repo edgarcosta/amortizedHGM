@@ -250,7 +250,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         """
         s = set()
         wild_primes = self.wild_primes()
-        for m in (t, ~t, t-1):
+        for m in (t, ~t):
             for p in m.numerator().prime_divisors():
                 if p not in wild_primes:
                     s.add(p)
@@ -294,7 +294,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         # Exclude other small primes to avoid edge cases.
         d = max(i.denominator() for i in self._alpha + self._beta)
         t = QQ(t)
-        m = t.numerator()*t.denominator()*(t-1).numerator()
+        m = t.numerator()*t.denominator()
         lower_bound = max(self.e+1, d*(d-1)+1)
         return prime_range_by_residues(lower_bound, N, ds, m, s)
 
@@ -1131,7 +1131,6 @@ class AmortizingHypergeometricData(HypergeometricData):
         def get_utime():
             return resource.getrusage(resource.RUSAGE_SELF).ru_utime
 
-
         def report(res, name, t):
             res[name] = t
             if verbose:
@@ -1191,7 +1190,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 assert all(foo[p] % p**e == bar[p] % p**e for p in foo if p in bar)
             if i <= log2N_higher_powers_sage or i <= log2N_higher_powers_magma:
                 s = set(self.wild_primes())
-                m = QQ(t).numerator()*QQ(t).denominator()*QQ(t-1).numerator()
+                m = QQ(t).numerator()*QQ(t).denominator()
                 foo2 = []
                 n = self.degree()
                 for q in range(2**i):
