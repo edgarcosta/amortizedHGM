@@ -21,9 +21,9 @@ from .hgm_misc import (
 
 class pAdicLogGammaCache(UniqueRepresentation):
     """
-    This object caches logarithmic expansions of p-adic Gamma functions around rational numbers
+    This object caches logarithmic expansions of `p`-adic Gamma functions around rational numbers
     at a given precision `e` for `p > e`.  Values are cached in an amortized way,
-    with all p up to a specified `N` computed simultaneously.  If the neccessary `N` increases,
+    with all `p` up to a specified `N` computed simultaneously.  If the necessary `N` increases,
     then they will be recomputed.
 
     The main interface is through the ``expansion`` method.
@@ -37,7 +37,15 @@ class pAdicLogGammaCache(UniqueRepresentation):
         sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
         sage: cache = pAdicLogGammaCache(2)
         sage: cache.expansion((3,4,97))
-        (-7780, 1, [50, 3492])
+        (-7780, 1, [-47, 3492])
+
+    TESTS::
+
+        sage: from amortizedHGM.gamma_expansions import pAdicLogGammaCache
+        sage: e = 5
+        sage: cache = pAdicLogGammaCache(e)
+        sage: all(Zp(p)(a/b + 3*p, e).gamma() == i * c * Zp(p)(sum(f[-1-j]*(3*p)**j for j in range(e)), e).exp() for ((a,b,p),(c,i,f)) in cache.cache.items())
+        True
     """
     def __init__(self, e):
         self.e = e
@@ -57,7 +65,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache = pAdicLogGammaCache(2)
             sage: cache.increase_N(100)
             sage: cache.expansion((3,4,97))
-            (-7780, 1, [50, 3492])
+            (-7780, 1, [-47, 3492])
             
         Check that the cache is properly extended after enlarging `N`::
         
@@ -130,8 +138,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
     def load(self, filename):
         """
-        Load the cache from a previously saved file,
-        adding them to the current cache.
+        Load the cache from a previously saved file, adding them to the current cache.
 
         Note that the value e1 for the saved file can be larger than this e,
         but in this case any p with e < p <= e1 will be missing.
@@ -151,7 +158,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache2.load(filename)
             sage: set(c2).difference(set(cache2.cache))
             {(1, 4, 3)}
-            sage: all(c2[a,b,p][0] % p^2 == cache2.cache[a,b,p][0] and c2[a,b,p][1] == cache2.cache[a,b,p][1] and [u % p^2 for u in c2[a,b,p][2]] == cache2.cache[a,b,p][2] for (a,b,p) in cache2.cache)
+            sage: all(c2[a,b,p][0] == cache2.cache[a,b,p][0] and c2[a,b,p][1] == cache2.cache[a,b,p][1] and c2[a,b,p][2][0] % p == cache2.cache[a,b,p][2][0] % p and c2[a,b,p][2][1] % p^2 == cache2.cache[a,b,p][2][1] % p^2 for (a,b,p) in cache2.cache)
             True
             sage: os.remove(filename)
         """
@@ -170,7 +177,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
                     peD[p] = powers_list(p, e)
                 pe = peD[p]
                 c = c % pe[-1]
-                f = [f[i] % pe[i] for i in range(e)]
+                f = [f[-i] % pe[-i] for i in range(e,0,-1)]
                 cache[a,b,p] = (c, d, f)
         self.cache.update(cache)
 
@@ -182,11 +189,11 @@ class pAdicLogGammaCache(UniqueRepresentation):
 
         OUTPUT:
 
-        - c -- an integer
-        - i -- either 1 or -1
-        - f -- a polynomial in x
+        - ``c`` -- an integer
+        - ``i`` -- either 1 or -1
+        - ``f`` -- a polynomial in x, represented as a reversed coefficient list
 
-        Then the power series expansion of Gamma_p(x) around a/b is c^i exp(f) modulo (p,x)^e.
+        Then the power series expansion of Gamma_p(x) around a/b is c^i exp(i*f) modulo (p,x)^e.
 
         EXAMPLES::
 
@@ -199,13 +206,8 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: S.<x> = R[]
             sage: Zp(83)(5/7 + 3*83, e).gamma()
             46 + 72*83 + 14*83^2 + 71*83^3 + 30*83^4 + O(83^5)
-            sage: c^i * Zp(83)(S(list(reversed(f)))(3*83), e).exp() # FIXME
+            sage: c**i * Zp(83)(i*S(list(reversed(f)))(3*83), e).exp()
             46 + 72*83 + 14*83^2 + 71*83^3 + 30*83^4 + O(83^5)
-
-        TESTS::
-
-            sage: all(Zp(p)(a/b + 3*p, e).gamma() == c^i * Zp(p)(f(3*p), e).exp() for ((a,b,p),(c,i,f)) in cache.cache.items()) # FIXME
-            True
         """
         try:
             return expansion_from_cache(self.cache, *abp, self.e)
@@ -286,10 +288,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache.increase_N(20)
             sage: harmonics, den, mat, tmp = cache._expansion0_prep()
             sage: cache._expansion0(17, harmonics, den, mat, tmp)
-            [0, 72500, 0, 230, 0]
+            [0, 1675, 0, -428626, 0]
             sage: Zp(17)(3*17,5).gamma()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
-            sage: Zp(17)(72500*(3*17) + 230*(3*17)^3, 4).exp()
+            sage: Zp(17)(-428626*(3*17) + 1675*(3*17)^3, 4).exp()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
         return gamma_expansion_at_0(p, self.e, harmonics, den, mat, tmp)
@@ -298,12 +300,12 @@ class pAdicLogGammaCache(UniqueRepresentation):
     def _expansion_at_0(self):
         r"""
         Amortized computation of power series expansions of log of `p`-adic Gamma at 0.
-        We exclude primes \leq e.
+        We exclude primes `\leq e`.
 
         OUTPUT:
 
-        A dictionary, indexed by p between e+1 and N, with the value at p a list of integers
-        giving the coefficients of the power series expansion of Gamma_p(x)
+        A dictionary, indexed by `p` between `e+1` and `N`, with the value at `p` a list of integers
+        giving the coefficients of the power series expansion of `Gamma_p(x)`.
 
         EXAMPLES::
 
@@ -312,10 +314,10 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache.clear_cache()
             sage: cache.increase_N(20)
             sage: cache._expansion_at_0[17]
-            [0, 72500, 0, 230, 0]
+            [0, 1675, 0, -428626, 0]
             sage: Zp(17)(3*17,5).gamma()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
-            sage: Zp(17)(72500*(3*17) + 230*(3*17)^3, 4).exp()
+            sage: Zp(17)(-428626*(3*17) + 1675*(3*17)^3, 4).exp()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
         harmonics, den, mat, tmp = self._expansion0_prep()
@@ -325,13 +327,17 @@ class pAdicLogGammaCache(UniqueRepresentation):
         """
         Amortized computation of power series expansions of log `p`-adic Gamma around
         all rational numbers with denominator `d` between 0 and 1,
-        for primes p up to the current bound `N`.
+        for primes `p` up to the current bound `N`.
 
-        FIXME: Add explanation for the storage format of the cache
+        The value associated to a triple `(a,b,p)` is a triple `(c,i,f)` where `c` is a scalar,
+        `i` is a sign, and `f` is a tuple of length `e` (the precision of the cache) such that,
+        if we interpret `f` as the reversed vector of coefficients of a polynomial, we have
+        `\Gamma_p(a/b + px) = c i \exp(f(px))` for all `x \in \ZZ_p`. Note that this is not the 
+        same format returned by :meth:`expansion`:.
 
         INPUT:
 
-        - `d` -- a positive integer, the denominator
+        - ``d`` -- a positive integer, the denominator
 
         EXAMPLES::
 
@@ -339,8 +345,12 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache = pAdicLogGammaCache(3)
             sage: cache.increase_N(20)
             sage: cache._set_expansion_at_offset(3)
-            sage: cache.cache[2,3,7]
+            sage: (c,i,f) = cache.cache[2,3,7]; (c, i, f)
             (2, -1, [2, 14, 147])
+            sage: Zp(7)(2/3 + 3*7, 3).gamma()
+            5 + 6*7 + 7^2 + O(7^3)
+            sage: i * c * Zp(7)(f[-1] + (3*7)*f[-2] + (3*7)^2*f[-3], 3).exp()
+            5 + 6*7 + 7^2 + O(7^3)
         """
         def add_to_cache(b, d, p, c0):
             sgn, i = d.__rdivmod__(-b*p) # Same as divmod(-b*p, d)
