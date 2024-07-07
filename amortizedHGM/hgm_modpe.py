@@ -239,14 +239,17 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         OUTPUT:
 
-        The set of primes dividing the numerator or denominator of `t` or `t-1` which are not wild primes.
+        The set of primes dividing the numerator or denominator of `t` which are not wild primes.
+        
+        Note that primes dividing the numerator of `t-1` are not reported as tame because the trace
+        formula still applies at such primes.
 
         EXAMPLES::
 
             sage: from amortizedHGM import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]))
             sage: H.tame_primes(380/117)
-            {3, 13, 19, 263}
+            {3, 13, 19}
         """
         s = set()
         wild_primes = self.wild_primes()
@@ -283,10 +286,15 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: from amortizedHGM import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(cyclotomic=([5,4], [7]))
             sage: H._prime_range(t=52/5, N=100)
-            {1: {0: [43, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]},
-             4: {1: [53, 61, 73, 89, 97], 3: [43, 59, 67, 71, 79, 83]},
-             5: {1: [61, 71], 2: [67, 97], 3: [43, 53, 73, 83], 4: [59, 79, 89]},
-             7: {1: [43, 71], 2: [79], 3: [59, 73], 4: [53, 67], 5: [61, 89], 6: [83, 97]}}
+            {1: {0: [43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]},
+             4: {1: [53, 61, 73, 89, 97], 3: [43, 47, 59, 67, 71, 79, 83]},
+             5: {1: [61, 71], 2: [47, 67, 97], 3: [43, 53, 73, 83], 4: [59, 79, 89]},
+             7: {1: [43, 71],
+             2: [79],
+             3: [59, 73],
+             4: [53, 67],
+             5: [47, 61, 89],
+             6: [83, 97]}}
         """
         ds = set([elt.denominator() for elt in self.starts])
         ds.add(1)
@@ -351,7 +359,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         INPUT:
 
-        - ``start`` -- a break point: a rational number a/b between 0 and 1 with appropriate denominator
+        - ``start`` -- a break point: a rational number `a/b` between 0 and 1 with appropriate denominator
         - ``pclass`` -- an integer between 0 and `b-1` that is relatively prime to `b`
 
         OUTPUT:
@@ -365,18 +373,18 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: from amortizedHGM import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(cyclotomic=([5,4], [7]))
             sage: H._numden_factors(2/7, 3)
-            {12/35: (1, 0),
-             11/28: (1, 0),
-             -16/35: (1, 0),
-             -9/35: (1, 0),
-             -3/28: (1, 0),
-             -2/35: (1, 0),
-             2/7: (-1, 0),
-             3/7: (-1, 1),
+            {-16/35: (1, 0),
              -3/7: (-1, 0),
              -2/7: (-1, 0),
+             -9/35: (1, 0),
              -1/7: (-1, 0),
-             0: (-1, 0)}
+             -3/28: (1, 0),
+             -2/35: (1, 0),
+             0: (-1, 0),
+             2/7: (-1, 0),
+             12/35: (1, 0),
+             11/28: (1, 0),
+             3/7: (-1, 1)}
         """
         # First count frequencies.
         freq = {}
@@ -471,7 +479,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]))
             sage: H.precompute_gammas(100)
             sage: H.gammas_cache.expansion((9, 28, 89))
-            (1928, -1, [-16, 1602])
+            (1928, -1, [73, 1602])
         """
         e = self.e
         if e == 1 and chained:
@@ -504,16 +512,16 @@ class AmortizingHypergeometricData(HypergeometricData):
 
             sage: from amortizedHGM import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(cyclotomic=([5], [2,2,2,2]))
-            sage: H.displacements(50, 1/2, 1, 1)
-            {23: 23*k1 + 206,
-             29: 638*k1 + 316,
-             31: 341*k1 + 615,
-             37: 1258*k1 + 1288,
-             41: 902*k1 + 1193,
-             43: 1548*k1 + 1056,
-             47: 329*k1 + 722}
-            sage: H.displacements(50, 3/5, 2, 0)
-            {37: 624, 47: 106}
+            sage: H.displacements(50, 1/2, 1)
+            {23: [1, (183, -24*k1 + 1)],
+             29: [1, (-322, -17*k1 + 1)],
+             31: [1, (274, 4*k1 + 1)],
+             37: [1, (30, 48*k1 + 1)],
+             41: [1, (291, -15*k1 + 1)],
+             43: [1, (-492, 23*k1 + 1)],
+             47: [1, (393, -30*k1 + 1)]}
+            sage: H.displacements(50, 3/5, 2)
+            {37: [624, 5], 47: [106, -18]}
         """
         e = self.e
         _, ps1 = self.break_mults_by_pclass(start, pclass)
@@ -547,10 +555,10 @@ class AmortizingHypergeometricData(HypergeometricData):
         tmp2 = [tuple(t[i].as_integer_ratio() for i in range(e)) for t in tmp2]
 
         gammas = self.gammas_cache
-        ei1 = e-ps1
-        ei = e-ps
+        ei1 = e - ps1
+        ei = e - ps
         eimax = max(ei1, ei)
-        gammasum = None if eimax==1 else [0 for i in range(eimax)]
+        gammasum = None if eimax == 1 else [0 for i in range(eimax)]
         l0 = (gammas, gammas.cache, gammas.e, flgl, gammasum)
         
         d = start.denominator()
@@ -560,7 +568,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         tmp = tuple(t.as_integer_ratio() for t in tmp)
         l = None if max(ei1, ei) <= 1 else (tmp2, r, d, 
             1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
-            1 if ei<1 else factorial(ZZ(ei-1))**3, inter_polys, R1.gen())
+            1 if ei < 1 else factorial(ZZ(ei-1))**3, inter_polys, R1.gen())
 
         ans = {p: gammas_to_displacements(p, ei1, ei,
                *gamma_expansion_product(l0, p, eimax), tmp, l)
@@ -570,7 +578,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if ei1 == e:
                 self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
             else:
-                self.zero_offsets[N] = {p: i[0]*multiplicative_lift(i[0], p, e, p_over_1_minus_p(p, e))%p**e for p, i in ans.items()}
+                self.zero_offsets[N] = {p: i[0] * multiplicative_lift(i[0], p, e, p_over_1_minus_p(p, e)) % p**e for p, i in ans.items()}
         return ans
 
     def amortized_padic_H_values_ferry(self, t, start, pclass):
@@ -645,7 +653,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: len(vectors)
             159
             sage: vectors[997]
-            [878914      0]
+            [     0 878914]
             [157867      0]
             [500805 119104]
         """
@@ -683,13 +691,13 @@ class AmortizingHypergeometricData(HypergeometricData):
         M = M.change_ring(RZ)
         # Remove content from M.
         den = gcd(M[i,j] for i in range(2*ei) for j in range(2*ei))
-        M = M.apply_map(lambda x,den=den: x//den)
+        M = M.apply_map(lambda x,den=den: x // den)
 
         # Prepend a matrix V to pick out the relevant rows of the product.
         # This saves a lot of overhead in the remainder forest calculation.
         if not chained:
             V = matrix(ZZ, ei+1, 2*ei)
-            for i in range(1,ei+2):
+            for i in range(1, ei+2):
                 V[-i,-i] = 1
 
         # Compute the amortized matrix product.
@@ -770,7 +778,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 if debug:
                     debug_check()
                 if ps1:
-                    tmp *= p if ps1==1 else p**ps1
+                    tmp *= p if ps1 == 1 else p**ps1
                 vectors[p] += tmp
         else:
             for p in self._prime_range(t, N)[d][pclass]:
@@ -781,7 +789,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 if debug:
                     debug_check()
                 if ps1:
-                    tmp *= p if ps1==1 else p**ps1
+                    tmp *= p if ps1 == 1 else p**ps1
                 vectors[p] += tmp
 
     def amortized_padic_H_values_interval(self, vectors, t, N, start, end, pclass, multlifts, debug=False):
@@ -858,12 +866,12 @@ class AmortizingHypergeometricData(HypergeometricData):
             for p, tmp in ans.items(): #inner loop
                 w = displacements[p][1]
                 mi = (start*(p-1)).floor()
-                tpow = (t%p).powermod(mi+1, p) # faster than power_mod(t, mi, p)
+                tpow = (t%p).powermod(mi+1, p) # faster than power_mod(t, mi+1, p)
                 tmp2 = moddiv_int(tpow*w*tmp[-1,0], tmp[0,-1], p)
                 if debug:
                     debug_check()
                 if ps:
-                    tmp2 *= p if ps==1 else p**ps
+                    tmp2 *= p if ps == 1 else p**ps
                 vectors[p] += tmp2
         else:
             for p, tmp in ans.items(): #inner loop
@@ -1100,32 +1108,41 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         EXAMPLES::
 
+            sage: from amortizedHGM import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(cyclotomic=([4,4,2,2], [3,3,3]))
-            sage: H.compare(14, 1337, log2N_sage=14, verbose=True) #random
+            sage: H.compare(14, 1337, log2N_sage=12, verbose=True) #random
             2^12
-            Amortized Gamma: 0.04 s
-            Additional precomputation: 0.02 s
-            Amortized HG: 0.04 s
+            Amortized Gamma: 0.23 s
+            Additional precomputation: 0.13 s
+            Amortized HG: 0.31 s
+            Total: 0.67s
+            Sage (p): 44.31 s
 
             2^13
-            Amortized Gamma: 0.09 s
-            Additional precomputation: 0.03 s
-            Amortized HG: 0.04 s
+            Amortized Gamma: 0.23 s
+            Additional precomputation: 0.17 s
+            Amortized HG: 0.22 s
+            Total: 0.62 s
 
             2^14
-            Amortized Gamma: 0.08 s
-            Additional precomputation: 0.04 s
-            Amortized HG: 0.06 s
+            Amortized Gamma: 0.61 s
+            Additional precomputation: 0.37 s
+            Amortized HG: 0.39 s
+            Total: 1.37 s
 
-            {12: {'Amortized Gamma': 0.040715999999999974,
-              'Additional precomputation': 0.015135999999999927,
-              'Amortized HG': 0.043184},
-             13: {'Amortized Gamma': 0.09205699999999983,
-              'Additional precomputation': 0.025457000000000063,
-              'Amortized HG': 0.03719500000000009},
-             14: {'Amortized Gamma': 0.08010300000000004,
-              'Additional precomputation': 0.04140199999999994,
-              'Amortized HG': 0.05902000000000007}}
+            {12: {'Amortized Gamma': 0.22577900000000017,
+              'Additional precomputation': 0.13210600000000028,
+              'Amortized HG': 0.3086019999999996,
+              'Total': 0.666487,
+              'Sage (p)': 44.309108},
+             13: {'Amortized Gamma': 0.2341380000000015,
+              'Additional precomputation': 0.17378699999999725,
+              'Amortized HG': 0.21690199999999749,
+              'Total': 0.6248269999999962},
+             14: {'Amortized Gamma': 0.6060069999999982,
+              'Additional precomputation': 0.3704879999999946,
+              'Amortized HG': 0.3893419999999992,
+              'Total': 1.365836999999992}}
         """
         import resource
         def get_utime():
@@ -1218,6 +1235,4 @@ class AmortizingHypergeometricData(HypergeometricData):
                 print("")
 
         return res
-
-
 
