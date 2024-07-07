@@ -658,7 +658,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             [500805 119104]
         """
         d = start.denominator()
-        r = start.numerator()*(pclass-1) % d
+        r = start.numerator() * (pclass-1) % d
         flgl = self._numden_factors(start, pclass)
 
         RQ = QQ['k']
@@ -666,12 +666,15 @@ class AmortizingHypergeometricData(HypergeometricData):
         K = RQ.fraction_field()
 
         M = matrix(K, 2*ei, 2*ei)
+
         # Top left quadrant of M is a scalar matrix.
         for i in range(ei):
             M[i,i] = 1
+
         # Bottom left quadrant of M represents the substitution on x.
         for i in range(ei):
             M[ei+i,i] = y*(k-r/d)**(ei-1-i)
+
         # Bottom right quadrant of M represents the accumulating product.
         R1 = K['x']
         x = R1.gen()
@@ -691,7 +694,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         M = M.change_ring(RZ)
         # Remove content from M.
         den = gcd(M[i,j] for i in range(2*ei) for j in range(2*ei))
-        M = M.apply_map(lambda x,den=den: x // den)
+        M = M.apply_map(lambda x, den=den: x // den)
 
         # Prepend a matrix V to pick out the relevant rows of the product.
         # This saves a lot of overhead in the remainder forest calculation.
@@ -704,7 +707,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         # We use cutoff to pick out the relevant columns of the product.
         indices = self._prime_range(t, N)[d][pclass]
         return remainder_forest(M,
-                         lambda p, e=ei: p**ei,
+                         lambda p, e=ei: p**e,
                          mbound_dict_c(indices, start, end),
                          kbase=1, V=V,
                          indices=indices, ans=ans, projective=True,

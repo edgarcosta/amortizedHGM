@@ -7,15 +7,15 @@ from sage.rings.rational cimport Rational
 # Utility functions
 # *******
 
-cpdef list powers_list(Integer p, int e):
+cpdef list powers_list(Integer p, int e, int initial_index=1):
     r"""
     Compute [p, p**2, ..., p**e].
     """
     cdef int i
     cdef list l
 
-    l = [p]
-    for i in range(e-1):
+    l = [p if initial_index == 1 else 1]
+    for i in range(e-initial_index):
         l.append(l[-1]*p)
     return l
 
@@ -48,6 +48,7 @@ cpdef Integer truncated_log_mod(Integer x, int e, Integer m):
     r"""
     Compute log(x) truncated modulo (x**e, m). Assumes that x is a Sage integer.
     """
+    cdef int i
     cdef Integer x1 = 1-x
     cdef Integer mult = -x1
     cdef Integer tmp = mult
@@ -82,13 +83,37 @@ cpdef multiplicative_lift(t, Integer p, int e, x=Integer(1)):
     cdef Integer tmp4 = tmp2
 
     # Exponentiate to get the desired series.
-    tmp3 = Integer(1)+tmp2*x
+    tmp3 = Integer(1) + tmp2*x
     tmp5 = x
     for i in range(2, e):
         tmp4 = moddiv_int(tmp4*tmp2, Integer(i), p**(e-i))
         tmp5 *= x
         tmp3 += tmp4*tmp5
     return tmp3
+
+cdef eval_poly_as_gen(l, x):
+    r"""
+    Evaluate a polynomial specified by a list of coefficients in descending order.
+
+    This implements "Horner's rule" which long predates Horner.
+    """
+    ans = 0
+    for i in l:
+        ans = ans*x + i
+    return ans
+
+cdef Integer eval_poly_as_gen_int(l, Integer x):
+    r"""
+    Evaluate a polynomial specified by a list of coefficients in descending order.
+
+    This implements "Horner's rule" which long predates Horner. Assumes that everything
+    specified is a Sage integer.
+    """
+    cdef Integer ans = Integer(), i
+
+    for i in l:
+        ans = ans*x + i
+    return ans
 
 # *******
 # Functions used to accelerate certain inner loops.
@@ -129,7 +154,7 @@ cpdef dict prime_range_by_residues(a, b, dens, m, s):
             if d.gcd(r) == 1:
                 prime_ranges[d][r] = []
     for p in prime_range(a, b):
-        if p not in s and m%p:
+        if p not in s and m % p:
             for d in dens:
                 prime_ranges[d][p % d].append(p)
     return prime_ranges
@@ -144,7 +169,7 @@ cpdef list gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, t
     tmp[0,0] = truncated_log_mod(-harmonics[1][p][0,1], e, p_powers[-1]) # = log -(p-1)!
     for i in range(1, e-1):
         h = harmonics[i][p]
-        tmp[0,i] = (-1 if i%2 else 1)*p_powers[i-1]*moddiv_int(-h[0,0], 
+        tmp[0,i] = (-p_powers[i-1] if i%2 else p_powers[i-1]) * moddiv_int(-h[0,0], 
             i*h[0,1], p_powers[e-i-1])
 
     # Use a matrix multiplication to invert the difference operator.
@@ -155,8 +180,9 @@ cpdef list gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, t
     return ans
 
 cpdef tuple gamma_translate(list s, Integer p, harmonics, int e, Integer b, Integer d):
-    # Computes an inner loop in the computation of Gamma_p(x+c).
-
+    r"""
+    Compute an inner loop in the computation of Gamma_p(x+c).
+    """
     cdef int i, j
     cdef Integer tmp, sgn, k
     cdef list p_powers
@@ -174,11 +200,11 @@ cpdef tuple gamma_translate(list s, Integer p, harmonics, int e, Integer b, Inte
     tmp = p*moddiv_int(-b, d, p_powers[e-2])
     for i in range(1, e):
         for j in range(i, 0, -1):
-            l[j] = (l[j]+l[j-1]*tmp)%p_powers[j]
+            l[j] = (l[j]+l[j-1]*tmp) % p_powers[j]
 
     # Prepare output for cache. Note that h = harmonics[1][p].
     sgn, k = d.__rdivmod__(-b*p) # Same as divmod(-b*p, d)
-    sgn = Integer(-1) if sgn%2 else Integer(1)
+    sgn = Integer(-1 if sgn%2 else 1)
     return ((k, d, p), (h[0,1], sgn, l))
 
 cdef sign_flip(l, int e):
@@ -220,7 +246,7 @@ cpdef gamma_expansion_product(l, Integer p, int e):
     # Note: gammasum will be updated on output.
     gammas, gammas_cache, gammas_e, flgl, gammasum = l
 
-    cdef Integer num = Integer(1), den = Integer(1)
+    cdef Integer num = Integer(1), den = num
     if e > 1:
         for i in range(e):
             gammasum[i] = 0
@@ -230,12 +256,12 @@ cpdef gamma_expansion_product(l, Integer p, int e):
             tmp0, j0, tmp1 = expansion_from_cache(gammas_cache, inum, iden, p, gammas_e)
         except KeyError: # Force cache extension
             tmp0, j0, tmp1 = gammas.expansion((inum, iden, p))
-        j1 = j if j0>0 else -j
+        j1 = j if j0 > 0 else -j
 
         if j1 > 0:
-            num *= tmp0 if j1==1 else tmp0**j1
+            num *= tmp0 if j1 == 1 else tmp0**j1
         else:
-            den *= tmp0 if j1==-1 else tmp0**-j1
+            den *= tmp0 if j1 == -1 else tmp0**-j1
         if e > 1:
             for i in range(e):
                 # Beware that len(tmp1) can exceed e.
@@ -243,32 +269,8 @@ cpdef gamma_expansion_product(l, Integer p, int e):
     
     return num, den, gammasum
 
-cdef eval_poly_as_gen(l, x):
-    r"""
-    Evaluate a polynomial specified by a list of coefficients in descending order.
-
-    This implements "Horner's rule" which long predates Horner.
-    """
-    ans = 0
-    for i in l:
-        ans = ans*x + i
-    return ans
-
-cdef Integer eval_poly_as_gen_int(l, Integer x):
-    r"""
-    Evaluate a polynomial specified by a list of coefficients in descending order.
-
-    This implements "Horner's rule" which long predates Horner. Assumes that everything
-    specified is a Sage integer.
-    """
-    cdef Integer ans = Integer(0), i
-    
-    for i in l:
-        ans = ans*x + i
-    return ans
-
-cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den,
-    list gammasum0, tmp, l):
+cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, 
+    Integer den, list gammasum0, tmp, l):
     r"""
     Compute an inner loop in the computation of P_{m_i} and P_{m_i+1}.
     """
@@ -288,7 +290,7 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den
         prod_num = tmp_index[0]*num
         prod_den = tmp_index[1]*den
 
-        etmp = (e1, e)[index]
+        etmp = e1 if index == 0 else e
         if etmp <= 0:
             ans.append(None)
         elif etmp == 1:
@@ -302,8 +304,7 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den
         else:
             # Adjust the logarithmic series expansion to account for integer shifts.
             # Beware that gammasum0 may be longer than e.
-            p_powers = powers_list(p, etmp)
-            p_powers.insert(0, Integer(1))
+            p_powers = powers_list(p, etmp, initial_index=0)
             tmp2i = tmp2[index]
             gammasum = [gammasum0[i-etmp] + moddiv_int(*tmp2i[etmp-1-i], p_powers[i+1]) for i in range(etmp)]
 
@@ -323,12 +324,12 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den
                 elif e == 4: # Abbreviated version of the next step
                     tmp1 = 6*(6 + 6*gammasum[2]*k1 + (3*gammasum[2]**2 + 6*gammasum[1])*k1**2 + (gammasum[2]**3 + 6*gammasum[1]*gammasum[2] + 6*gammasum[0])*k1**3)
                 else: # index == 1 and e > 4
-                    gammasum[-1] = Integer(0)
+                    gammasum[-1] = Integer()
                     # Compute the polynomial with coefficients c_{i,h}(p) by interpolation.
                     # This introduces a factor of 1/(e-1)!**2 into the carried constant.
                     tmp1 = 0*k1
                     for i in range(e):
-                        tmp3 = eval_poly_as_gen_int(gammasum, i*p) if i else Integer(0)
+                        tmp3 = eval_poly_as_gen_int(gammasum, i*p) if i else Integer()
                         tmp1 += truncated_exp_int(tmp3, e)*inter_polys[i]
                     # Remove formal powers of p.
                     for i in range(e):
@@ -341,17 +342,16 @@ cpdef gammas_to_displacements(Integer p, int e1, int e, Integer num, Integer den
     return ans
 
 cpdef Integer hgm_matmult(w, ans, Integer pe1, int s):
-    # Computes a matrix multiplication in the innermost loop of the trace formula.
-
+    r"""
+    Compute a matrix multiplication in the innermost loop of the trace formula.
+    """
     cdef int h1, h2
-    cdef Integer tmp = Integer(0), tmp2, tmp3 = Integer(1)
+    cdef Integer tmp = Integer()
 
-    for h2 in range(s):
-        tmp2 = Integer(0)
-        for h1 in range(h2+1):
-            tmp2 += w[h1]*ans[-1-h1,-1-h2]
-        tmp += tmp2*tmp3
-        if h2 < s-1:
-            tmp3 *= pe1
+    for h2 in range(s, 0, -1):
+        for h1 in range(h2):
+            tmp += w[h1]*ans[-1-h1,-h2]
+        if h2 > 1:
+            tmp *= pe1
     return tmp
 
