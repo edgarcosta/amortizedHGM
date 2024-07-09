@@ -130,9 +130,8 @@ cpdef dict prime_range_by_residues(a, b, dens, m, s):
     prime_ranges = {}
     for d in dens:
         prime_ranges[d] = {}
-        for r in range(d):
-            if d.gcd(r) == 1:
-                prime_ranges[d][r] = []
+        for r in d.coprime_integers(d):
+            prime_ranges[d][r] = []
     for p in prime_range(a, b):
         if p not in s and m % p:
             for d in dens:

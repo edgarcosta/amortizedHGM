@@ -344,10 +344,9 @@ class AmortizingHypergeometricData(HypergeometricData):
             resab = {}
             if b == 1: # start = 0
                 resab[0] = QQ(0)
-            for pclass in range(1, b):
-                if b.gcd(pclass) == 1:
-                    v = (a*(pclass - 1)) % b
-                    resab[pclass] = (-a-v)/b
+            for pclass in b.coprime_integers(b):
+                v = (a*(pclass - 1)) % b
+                resab[pclass] = (-a-v)/b
             answer[start] = resab
         return answer
 
@@ -421,11 +420,10 @@ class AmortizingHypergeometricData(HypergeometricData):
         dens = set([1])
         for (start, _) in self.truncated_starts_ends():
             d = start.denominator()
-            for pclass in range(d):
-                if d.gcd(pclass) == 1:
-                    # r = start.numerator()*(pclass-1) % d
-                    for i in self._numden_factors(start, pclass):
-                        dens.add(i.denominator())
+            for pclass in d.coprime_integers(d):
+                # r = start.numerator() * (pclass-1) % d
+                for i in self._numden_factors(start, pclass):
+                    dens.add(i.denominator())
         return dens
 
     def verify_summand(self, p, t, m, ei):
@@ -527,7 +525,7 @@ class AmortizingHypergeometricData(HypergeometricData):
         _, ps = self.interval_mults[start]
         if start == 0: 
             # Need initial value modulo p**e for normalization.
-            # In the balanced case, we only need it modulo p.
+            # In the Galois-stable case, we only need it modulo p.
             ps1 = min(e-1, ps1)
         if ps1 >= e and ps >= e:
             return None
@@ -885,7 +883,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 w0, w = displacements[p][1]
                 mi = (start*p_minus_1).floor()
                 pe = p**ei
-                pe1 = (pe-p) // (p-1)
+                pe1 = (pe-p) // p_minus_1
 
                 # Compute the c_{i,h}(p) by combining precomputed values with [z]^{mi+1}.
                 arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, -d*p_minus_1, p**(ei-1)))
@@ -978,19 +976,18 @@ class AmortizingHypergeometricData(HypergeometricData):
         vectors = {p: tmp for p in self._prime_range(t, N)[1][0]}
         for start, end in self.truncated_starts_ends():
             d = start.denominator()
-            for pclass in range(d):
-                if d.gcd(pclass) == 1:
-                    if chained: # Forces e==1
-                        # Construct the matrix T_i.
-                        Ti = self.amortized_padic_H_values_ferry(t, start, pclass)
-                        # Update vectors by multiplying by T_i*S_i(p).
-                        y, ps = self.interval_mults[start]
-                        self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=Ti, ans=vectors, chained=True)
-                    else:
-                        # Update vectors with P'_{m_i}.
-                        self.amortized_padic_H_values_step(vectors, t, N, start, pclass, multlifts, debug)
-                        # Update vectors with P'_{m_i+1}, ..., P'_{m_{i+1}}.
-                        self.amortized_padic_H_values_interval(vectors, t, N, start, end, pclass, multlifts, debug)
+            for pclass in d.coprime_integers(d):
+                if chained: # Forces e==1
+                    # Construct the matrix T_i.
+                    Ti = self.amortized_padic_H_values_ferry(t, start, pclass)
+                    # Update vectors by multiplying by T_i*S_i(p).
+                    y, ps = self.interval_mults[start]
+                    self.amortized_padic_H_values_matrix(t, N, 1, 0 if ps else y, start, end, pclass, V=Ti, ans=vectors, chained=True)
+                else:
+                    # Update vectors with P'_{m_i}.
+                    self.amortized_padic_H_values_step(vectors, t, N, start, pclass, multlifts, debug)
+                    # Update vectors with P'_{m_i+1}, ..., P'_{m_{i+1}}.
+                    self.amortized_padic_H_values_interval(vectors, t, N, start, end, pclass, multlifts, debug)
 
         # Extract results.
         if chained: # Forces e==1
@@ -1180,9 +1177,8 @@ class AmortizingHypergeometricData(HypergeometricData):
                     start = get_utime()
                     for (s, _) in self.truncated_starts_ends():
                         d = s.denominator()
-                        for pclass in range(d):
-                            if gcd(d, pclass) == 1:
-                                self.displacements(2**i, s, pclass)
+                        for pclass in d.coprime_integers(d):
+                            self.displacements(2**i, s, pclass)
 
                     report(res[i], "Additional precomputation", get_utime()-start)
             else:

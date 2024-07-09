@@ -362,21 +362,19 @@ class pAdicLogGammaCache(UniqueRepresentation):
             if d == 1:
                 self.cache.update(((zero, one, p), (minusone, minusone, None)) for p in prime_range(3, n))
             else:
-                for b in srange(1, d//2+1):
-                    if gcd(b, d) == 1:
-                        fac = batch_factorial(n, 1, b/d)
-                        self.cache.update(add_to_cache(b,d,p,f) for p,f in fac.items()) # inner loop
+                for b in d.coprime_integers(d//2 + 1):
+                    fac = batch_factorial(n, 1, b/d)
+                    self.cache.update(add_to_cache(b,d,p,f) for p,f in fac.items()) # inner loop
         else:
             zero_exp = self._expansion_at_0
             if d == 1:
                 self.cache.update(((zero, one, p), (minusone, minusone, s)) for p, s in zero_exp.items())
             else:
-                for b in srange(1, d//2+1):
-                    if gcd(b, d) == 1:
-                        harmonics = {j: batch_harmonic(n, e-j if j>1 else e, 
-                            b/d, j, proj=True) for j in range(1, e)}
-                        # Combine the expansion at 0 with the contribution from
-                        # harmonic sums, then recenter the log expansion.
-                        self.cache.update(gamma_translate(s, p, harmonics, e, b, d) 
-                                for p,s in zero_exp.items() if p>d or d%p) # inner loop
+                for b in d.coprime_integers(d//2 + 1):
+                    harmonics = {j: batch_harmonic(n, e-j if j>1 else e, 
+                        b/d, j, proj=True) for j in range(1, e)}
+                    # Combine the expansion at 0 with the contribution from
+                    # harmonic sums, then recenter the log expansion.
+                    self.cache.update(gamma_translate(s, p, harmonics, e, b, d) 
+                            for p,s in zero_exp.items() if p>d or d%p) # inner loop
 
