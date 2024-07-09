@@ -38,7 +38,6 @@ from .hgm_misc import (
     mbound_dict_c,
     moddiv_int,
     multiplicative_lift,
-    p_over_1_minus_p,
     prime_range_by_residues
 )
 
@@ -552,6 +551,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                     tmp2[index] -= j*sum((-x1/(i-1))**k/k for k in range(1,e))
                 elif i == 0:
                     tmp[index] *= (-QQ(1))**j
+        tmp = tuple(t.as_integer_ratio() for t in tmp)
         tmp2 = [tuple(t[i].as_integer_ratio() for i in range(e)) for t in tmp2]
 
         gammas = self.gammas_cache
@@ -562,10 +562,9 @@ class AmortizingHypergeometricData(HypergeometricData):
         l0 = (gammas, gammas.cache, gammas.e, flgl, gammasum)
         
         d = start.denominator()
-        r = start.numerator()*(pclass-1) % d
+        r = start.numerator() * (pclass-1) % d
         R1 = ZZ['k1'] # k1 stands for k-r/d
         inter_polys = interpolation_polys(ei, R1.gen())
-        tmp = tuple(t.as_integer_ratio() for t in tmp)
         l = None if max(ei1, ei) <= 1 else (tmp2, r, d, 
             1 if ei1 < 1 else factorial(ZZ(ei1-1)), 
             1 if ei < 1 else factorial(ZZ(ei-1))**3, inter_polys, R1.gen())
@@ -573,12 +572,15 @@ class AmortizingHypergeometricData(HypergeometricData):
         ans = {p: gammas_to_displacements(p, ei1, ei,
                *gamma_expansion_product(l0, p, eimax), tmp, l)
                for p in self._prime_range(ZZ(-1), N)[d][pclass]} #inner loop
-        # If start==0, we need to extract a normalization factor.
-        if start == 0:
+        if start == 0: # Extract a normalization factor
             if ei1 == e:
                 self.zero_offsets[N] = {p: i[0] for p, i in ans.items()}
             else:
-                self.zero_offsets[N] = {p: i[0] * multiplicative_lift(i[0], p, e, p_over_1_minus_p(p, e)) % p**e for p, i in ans.items()}
+                self.zero_offsets[N] = {}
+                for p, i in ans.items():
+                    pe = p**e
+                    pe1 = (pe-p) // (p-1)
+                    self.zero_offsets[N][p] = i[0] * multiplicative_lift(i[0], p, e, pe1) % pe
         return ans
 
     def amortized_padic_H_values_ferry(self, t, start, pclass):
@@ -771,13 +773,13 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         def debug_check():
             print("checking step", start, p, mi, ps1)
-            assert tmp == y1*self.verify_summand(p, t, mi, ei1)*self.zero_offsets[N][p]
+            assert tmp == y1 * self.verify_summand(p, t, mi, ei1) * self.zero_offsets[N][p]
 
         if ei1 == 1: # Abbreviated version of the general case.
             for p in self._prime_range(t, N)[d][pclass]:
                 mi = (start*(p-1)).floor()
                 tpow = (t%p).powermod(mi, p) # faster than power_mod(t, mi, p)
-                tmp = y1*(tpow*displacements[p][0]%p)
+                tmp = y1 * (tpow*displacements[p][0]%p)
                 if debug:
                     debug_check()
                 if ps1:
@@ -787,8 +789,9 @@ class AmortizingHypergeometricData(HypergeometricData):
             for p in self._prime_range(t, N)[d][pclass]:
                 mi = (start*(p-1)).floor()
                 pe = p**ei1
-                tpow = (t%pe).powermod(mi, pe) * multlifts[p](mi*p_over_1_minus_p(p, e))
-                tmp = y1*(tpow*displacements[p][0]%pe)
+                pe1 = (pe-p) // (p-1)
+                tpow = (t%pe).powermod(mi, pe) * multlifts[p](mi*pe1)
+                tmp = y1 * (tpow*displacements[p][0]%pe)
                 if debug:
                     debug_check()
                 if ps1:
@@ -882,7 +885,7 @@ class AmortizingHypergeometricData(HypergeometricData):
                 w0, w = displacements[p][1]
                 mi = (start*p_minus_1).floor()
                 pe = p**ei
-                pe1 = p_over_1_minus_p(p, ei)
+                pe1 = (pe-p) // (p-1)
 
                 # Compute the c_{i,h}(p) by combining precomputed values with [z]^{mi+1}.
                 arg = mi*pe1 if not r else p*(moddiv_int(d*mi+r, d, p) if ei==2 else moddiv_int(d*mi+r, -d*p_minus_1, p**(ei-1)))
@@ -961,7 +964,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             if debug:
                 for p in multlifts:
                     pe = p**e
-                    pe1 = p_over_1_minus_p(p, e) # reduces to p/(1-p) mod pe
+                    pe1 = (pe-p) // (p-1) # reduces to p/(1-p) mod pe
                     assert power_mod(t*multlifts[p](pe1),pe-1,pe) == 1
                     assert multlifts[p](pe1)%p == 1
 

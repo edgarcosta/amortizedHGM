@@ -12,20 +12,11 @@ cpdef list powers_list(Integer p, int e, int initial_index=1):
     Compute [p, p**2, ..., p**e].
     """
     cdef int i
-    cdef list l
+    cdef list l = [p if initial_index == 1 else 1]
 
-    l = [p if initial_index == 1 else 1]
     for i in range(e-initial_index):
         l.append(l[-1]*p)
     return l
-
-cpdef Integer p_over_1_minus_p(Integer p, int e):
-    r"""
-    Compute the reduction of p/(1-p) mod p**e.
-    """
-    if e == 2:
-       return p
-    return (p**e-p).divide_knowing_divisible_by(p-1)
 
 cpdef Integer moddiv_int(Integer a, Integer b, Integer m):
     r"""
@@ -33,16 +24,8 @@ cpdef Integer moddiv_int(Integer a, Integer b, Integer m):
 
     This avoids creating any elements of QQ.
     """
-    cdef Integer x = a*b.inverse_mod(m)%m
+    cdef Integer x = a * b.inverse_mod(m) % m
     return x if x <= m>>1 else x-m
-
-cdef moddiv(a, Integer b, Integer m):
-    r"""
-    Compute a/b mod m. Both b and m must be Sage integers.
-
-    This avoids creating any elements of QQ.
-    """
-    return a*b.inverse_mod(m)%m
 
 cpdef Integer truncated_log_mod(Integer x, int e, Integer m):
     r"""
@@ -77,7 +60,8 @@ cpdef multiplicative_lift(t, Integer p, int e, x=Integer(1)):
     p-adic multiplicative lift.
     """
     cdef int i
-    cdef Integer pe = p**e
+    cdef list l = powers_list(p, e)
+    cdef Integer pe = l[-1]
     cdef Integer tmp = (t%pe).powermod(p-1, pe) # Faster than power_mod(t, p-1, pe)
     cdef Integer tmp2 = truncated_log_mod(tmp, e, pe).divide_knowing_divisible_by(p)
     cdef Integer tmp4 = tmp2
@@ -86,7 +70,7 @@ cpdef multiplicative_lift(t, Integer p, int e, x=Integer(1)):
     tmp3 = Integer(1) + tmp2*x
     tmp5 = x
     for i in range(2, e):
-        tmp4 = moddiv_int(tmp4*tmp2, Integer(i), p**(e-i))
+        tmp4 = moddiv_int(tmp4*tmp2, Integer(i), l[-1-i])
         tmp5 *= x
         tmp3 += tmp4*tmp5
     return tmp3
@@ -114,10 +98,6 @@ cdef Integer eval_poly_as_gen_int(l, Integer x):
     for i in l:
         ans = ans*x + i
     return ans
-
-# *******
-# Functions used to accelerate certain inner loops.
-# *******
 
 cdef long mbound_c_ints(long p, int start_num, int start_den, int end_num, int end_den):
     return max((end_num * (p-1)) // end_den - (start_num * (p-1)) // start_den, 1)
@@ -159,6 +139,10 @@ cpdef dict prime_range_by_residues(a, b, dens, m, s):
                 prime_ranges[d][p % d].append(p)
     return prime_ranges
 
+# *******
+# Functions used to accelerate certain inner loops.
+# *******
+
 cpdef list gamma_expansion_at_0(Integer p, int e, harmonics, Integer den, mat, tmp):
     cdef int i
     cdef list ans, p_powers
@@ -185,9 +169,7 @@ cpdef tuple gamma_translate(list s, Integer p, harmonics, int e, Integer b, Inte
     """
     cdef int i, j
     cdef Integer tmp, sgn, k
-    cdef list p_powers
-
-    p_powers = powers_list(p, e)
+    cdef list p_powers = powers_list(p, e)
 
     # Note that s starts out representing the *reversed* expansion at 0.
     # We combine it with the contribution from harmonic sums.
@@ -225,7 +207,8 @@ cpdef expansion_from_cache(dict cache, Integer a, Integer b, Integer p, int e):
     if (a,b,p) in cache:
         c, j, f = cache[a, b, p]
         return (-c if j<0 else c), 1, f
-    # Use the Legendre relation if possible.
+
+    # Use the Legendre relation instead.
     c, _, f = cache[b-a, b, p]
     # substitute x -> -x (and multiply by -1)
     return c, -1, sign_flip(f, e)
@@ -241,23 +224,19 @@ cpdef gamma_expansion_product(l, Integer p, int e):
     cdef int gammas_e, i, j, j0, j1
     cdef list gammasum
     cdef Integer tmp0, inum, iden, c
+    cdef Integer num = Integer(1), den = num
 
     # Import local variables from the calling scope. These do not depend on p.
     # Note: gammasum will be updated on output.
     gammas, gammas_cache, gammas_e, flgl, gammasum = l
 
-    cdef Integer num = Integer(1), den = num
     if e > 1:
         for i in range(e):
             gammasum[i] = 0
     
     for (inum,iden),j in flgl.items(): # i = inum/iden
-        try:
-            tmp0, j0, tmp1 = expansion_from_cache(gammas_cache, inum, iden, p, gammas_e)
-        except KeyError: # Force cache extension
-            tmp0, j0, tmp1 = gammas.expansion((inum, iden, p))
+        tmp0, j0, tmp1 = gammas.expansion((inum, iden, p))
         j1 = j if j0 > 0 else -j
-
         if j1 > 0:
             num *= tmp0 if j1 == 1 else tmp0**j1
         else:
@@ -348,10 +327,9 @@ cpdef Integer hgm_matmult(w, ans, Integer pe1, int s):
     cdef int h1, h2
     cdef Integer tmp = Integer()
 
-    for h2 in range(s, 0, -1):
+    for h2 in range(s, 1, -1):
         for h1 in range(h2):
             tmp += w[h1]*ans[-1-h1,-h2]
-        if h2 > 1:
-            tmp *= pe1
-    return tmp
+        tmp *= pe1
+    return tmp + w[0]*ans[-1,-1]
 
