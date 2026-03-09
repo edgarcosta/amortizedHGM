@@ -38,7 +38,7 @@ jobs:
           pip install "cython==${CYTHON_VERSION}"
 
       - name: Install pyrforest
-        run: pip install --no-build-isolation git+https://github.com/edgarcosta/pyrforest.git
+        run: pip install git+https://github.com/edgarcosta/pyrforest.git
 
       - name: Build and install amortizedHGM
         run: pip install --no-build-isolation -e .
