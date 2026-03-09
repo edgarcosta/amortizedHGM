@@ -1,0 +1,47 @@
+name: CI Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+
+      - name: Install SageMath
+        run: conda install -y sage
+
+      - name: Match Cython version to SageMath
+        run: |
+          CYTHON_VERSION=$(sage -python -c "
+          import re, sage.rings.integer as m
+          with open(m.__file__, 'rb') as f:
+              match = re.search(rb'_cython_(\d+)_(\d+)_(\d+)', f.read())
+              print('.'.join(g.decode() for g in match.groups()))
+          ")
+          pip install "cython==${CYTHON_VERSION}"
+
+      - name: Install pyrforest
+        run: pip install --no-build-isolation git+https://github.com/edgarcosta/pyrforest.git
+
+      - name: Build and install amortizedHGM
+        run: pip install --no-build-isolation -e .
+
+      - name: Run doctests
+        run: sage -t --force-lib amortizedHGM

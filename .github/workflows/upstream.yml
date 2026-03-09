@@ -1,0 +1,63 @@
+name: Weekly Upstream Compatibility
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+
+      - name: Install SageMath
+        run: conda install -y sage
+
+      - name: Match Cython version to SageMath
+        run: |
+          CYTHON_VERSION=$(sage -python -c "
+          import re, sage.rings.integer as m
+          with open(m.__file__, 'rb') as f:
+              match = re.search(rb'_cython_(\d+)_(\d+)_(\d+)', f.read())
+              print('.'.join(g.decode() for g in match.groups()))
+          ")
+          pip install "cython==${CYTHON_VERSION}"
+
+      - name: Install pyrforest
+        run: pip install --no-build-isolation git+https://github.com/edgarcosta/pyrforest.git
+
+      - name: Build and install amortizedHGM
+        run: pip install --no-build-isolation -e .
+
+      - name: Run doctests
+        run: sage -t --force-lib amortizedHGM
+
+      - name: Record SageMath version on failure
+        if: failure()
+        run: |
+          sage_version=$(sage --version | head -1)
+          cat > issue_body.md <<EOF
+          The weekly upstream compatibility check failed with **${sage_version}**.
+
+          [View the failed run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          EOF
+
+      - name: Create or update issue
+        if: failure()
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "Upstream: test failure with latest SageMath"
+          content-filepath: issue_body.md
+          labels: upstream
