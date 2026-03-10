@@ -334,7 +334,7 @@ class AmortizingHypergeometricData(HypergeometricData):
              3/4: {1: -3/4, 3: -5/4},
              4/5: {1: -4/5, 2: -8/5, 3: -7/5, 4: -6/5},
              6/7: {1: -6/7, 2: -12/7, 3: -11/7, 4: -10/7, 5: -9/7, 6: -8/7},
-             1: {0: 0}}
+             1: {0: -1}}
              sage: all(floor(gam * (p-1)) % p == D[gam][p % gam.denominator()] % p for gam in D for p in prime_range(20) if gam != 1 and gam.denominator() % p != 0)
              True
         """

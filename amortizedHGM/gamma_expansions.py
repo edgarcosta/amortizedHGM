@@ -290,7 +290,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache._expansion0(17, harmonics, den, mat, tmp)
             [0, 1675, 0, -428626, 0]
             sage: Zp(17)(3*17,5).gamma()
-            1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
+            1 + 2*17 + 12*17^2 + 2*17^3 + 12*17^4 + O(17^5)
             sage: Zp(17)(-428626*(3*17) + 1675*(3*17)^3, 4).exp()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
@@ -316,7 +316,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
             sage: cache._expansion_at_0[17]
             [0, 1675, 0, -428626, 0]
             sage: Zp(17)(3*17,5).gamma()
-            1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
+            1 + 2*17 + 12*17^2 + 2*17^3 + 12*17^4 + O(17^5)
             sage: Zp(17)(-428626*(3*17) + 1675*(3*17)^3, 4).exp()
             1 + 2*17 + 12*17^2 + 2*17^3 + O(17^4)
         """
@@ -324,7 +324,7 @@ class pAdicLogGammaCache(UniqueRepresentation):
         return {p: self._expansion0(p, harmonics, den, mat, tmp) for p in prime_range(self.e+1, self.N)}
 
     def _set_expansion_at_offset(self, d):
-        """
+        r"""
         Amortized computation of power series expansions of log `p`-adic Gamma around
         all rational numbers with denominator `d` between 0 and 1,
         for primes `p` up to the current bound `N`.
