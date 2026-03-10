@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools", "cython"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amortizedHGM"
+version = "2.0.1"
+description = 'Sage code supporting "Hypergeometric L-functions in average polynomial time" by Edgar Costa, Kiran Kedlaya and David Roe'
+readme = "README.md"
+license = "GPL-3.0-only"
+authors = [
+    {name = "Edgar Costa", email = "edgarc@mit.edu"},
+    {name = "Kiran Kedlaya"},
+    {name = "David Roe"},
+]
+keywords = ["sagemath", "amortizedHGM"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "pyrforest @ git+https://github.com/edgarcosta/pyrforest.git",
+]
+
+[project.urls]
+Homepage = "https://github.com/edgarcosta/amortizedHGM"
