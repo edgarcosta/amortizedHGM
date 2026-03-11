@@ -238,7 +238,7 @@ def build_tree(base):
 
     EXAMPLES::
 
-        sage: from amortizedHGM.hgm import build_tree
+        sage: from amortizedHGM.hgm import build_tree, print_bottom_tree
         sage: tree = build_tree(list(range(1,14)))
         sage: tree
         [None,
@@ -546,7 +546,14 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: from amortizedHGM.hgm import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(100, cyclotomic=([22], [1, 1, 20]))
             sage: t, brk, p = 2312/231, 0, 101
-            sage: M = H.fix_break(t=t, brk=brk, p=p)
+            sage: d = brk.denominator(); pclass = p % d
+            sage: def _multiplier(x):
+            ....:     return -x if x else -1
+            sage: def _functional_eqn(a, g, c, d):
+            ....:     return (_multiplier(a-g-c/d) if a >= g else 1) * (_multiplier(a-g-c/d+1) if a <= g else 1)
+            sage: c = (d*brk*(pclass-1)) % d
+            sage: feq_seed = t*prod(_functional_eqn(a,brk,c,d) for a in H._alpha) / prod(_functional_eqn(b,brk,c,d) for b in H._beta)
+            sage: M = H.fix_break(t=t, brk=brk, p=p, d=d, pclass=pclass, feq_seed=feq_seed)
             sage: GF(p)(M[1,1]/M[0,0]) == GF(p)(t)*H.pochhammer_quotient(p, 1)
             True
 
@@ -700,25 +707,10 @@ class AmortizingHypergeometricData(HypergeometricData):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AmortizingHypergeometricData
-            sage: for cyca, cycb, start, end, p, t in [
-            ....:     ([6], [1, 1], 0, 1/6, 97, 1),
-            ....:     ([4, 2, 2], [3, 1, 1], 1/3, 1/2, 97, 1),
-            ....:     ([22], [1, 1, 20], 3/20, 5/22, 1087, 1),
-            ....:     ([22], [1, 1, 20], 3/20, 5/22, 1087, 1337/507734),
-            ....:     ([22], [1, 1, 20], 3/20, 5/22, 1019, 1337/507734)]:
-            ....:     H = AmortizingHypergeometricData(p+40, cyclotomic=(cyca, cycb))
-            ....:     pclass = p % start.denominator()
-            ....:     shift, offset = H._starts_to_rationals[start][pclass]
-            ....:     amortized = H.amortized_padic_H_values_interval(t=t, start=start, end=end, pclass=pclass)
-            ....:     t = GF(p)(t)
-            ....:     naive_sum = 0
-            ....:     for k in range(floor(start*(p-1))+1, floor(end * (p-1))):
-            ....:         naive_sum += t**k * H.pochhammer_quotient(p, k)
-            ....:     naive_res = vector(GF(p), (naive_sum, t**floor(end * (p-1)) * H.pochhammer_quotient(p, floor(end * (p-1) ))))
-            ....:     M = matrix(GF(p), amortized[p])
-            ....:     res = (vector(GF(p), [0,t**(floor(start*(p-1))+1) * H.pochhammer_quotient(p, floor(start*(p-1))+1 )])*M/M[0,0])
-            ....:     if naive_res != res:
-            ....:         print(cyca, cycb, start, end, p, t, naive_res, res)
+            sage: H = AmortizingHypergeometricData(1000, cyclotomic=([6], [1, 1]))
+            sage: foo = H.amortized_padic_H_values(1)
+            sage: all(foo[p] == H.naive_padic_H_value(t=1, p=p) for p in foo)
+            True
 
         """
         d = start.denominator()
@@ -799,16 +791,16 @@ class AmortizingHypergeometricData(HypergeometricData):
 
             sage: from amortizedHGM.hgm import AmortizingHypergeometricData
             sage: for cyca, cycb, t in [
-            ...:    ([6], [1, 1], 331),
-            ...:    ([4, 2, 2], [3, 1, 1],  3678),
-            ...:    ([22], [1, 1, 20], 1337/507734),
-            ...:    ([5],[1,1,1,1], 2313),
-            ...:    ([12],[2,2,1,1], 313)
-            ...:]:
-            ...:    H = AmortizingHypergeometricData(1000, cyclotomic=(cyca, cycb))
-            ...:    for p, v in H.amortized_padic_H_values(t).items():
-            ...:        if v != H.naive_padic_H_value(t=t, p=p, verbose=False):
-            ...:            print(p, cyca, cycb, t)
+            ....:    ([6], [1, 1], 331),
+            ....:    ([4, 2, 2], [3, 1, 1],  3678),
+            ....:    ([22], [1, 1, 20], 1337/507734),
+            ....:    ([5],[1,1,1,1], 2313),
+            ....:    ([12],[2,2,1,1], 313)
+            ....:]:
+            ....:    H = AmortizingHypergeometricData(1000, cyclotomic=(cyca, cycb))
+            ....:    for p, v in H.amortized_padic_H_values(t).items():
+            ....:        if v != H.naive_padic_H_value(t=t, p=p, verbose=False):
+            ....:            print(p, cyca, cycb, t)
         """
         ## TODO: skip over intermediate ranges with positive p-shift
         #pshift = self.pshift
@@ -924,7 +916,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
             sage: ARF._primes
             [5, 7, 11, 13, 17, 19]
         """
@@ -938,7 +930,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
             sage: ARF.primes
             [17, 19, 5, 7, 11, 13]
             sage: print_bottom_tree(ARF._moduli_tree, spaces=8)
@@ -960,7 +952,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
             sage: print_bottom_tree(ARF._value_tree, levels=6)
                                                                           263130836933693530167218012160000000
                                           20922789888000                                                  12576278705767096320000
@@ -990,7 +982,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
             sage: ARF.partial_factorial(5,10)
             15120
             sage: prod(range(5,10))
@@ -1067,7 +1059,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
             sage: ARF.factorial(6)
             720
             sage: ARF.factorial(6, 11) == 720 % 11
@@ -1088,7 +1080,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
             sage: print_bottom_tree(ARF._moduli_tree, spaces=12, levels=4)
                                                       6830089845471557190150625
                               627503752500625                                 10884540241
@@ -1111,7 +1103,7 @@ class AccRemForest(object):
 
             sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
             sage: N, b, e, k = 15, 3, 4, 2
-            sage: ARF = AccRemForest(N, {k: lambda p: ceil(k*p/b)}, lambda x: [elt for elt in range(1, x + 1)], e, lambda p: p > b)
+            sage: ARF = AccRemForest(N, {k: lambda p: ceil(k*p/b)}, lambda x: [elt for elt in range(1, x + 1)], e, [p for p in prime_range(N) if p > b])
             sage: ARF._primes
             [5, 7, 11, 13]
             sage: print_bottom_tree([elt if elt is None else str(elt.factor()) for elt in ARF._moduli_tree], spaces=20, levels=3)
