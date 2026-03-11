@@ -33,6 +33,7 @@ def finitediff(k, M, a=0):
 
     EXAMPLES::
 
+        sage: from amortizedHGM.hgm import finitediff
         sage: [elt for elt in finitediff(10, [1, 2, 3, 4])]
         [1, 10, 49, 142, 313, 586, 985, 1534, 2257, 3178]
 
@@ -113,6 +114,7 @@ def next_power_of_2(n):
 
     EXAMPLES::
 
+        sage: from amortizedHGM.hgm import next_power_of_2
         sage: next_power_of_2(13)
         16
         sage: next_power_of_2(1)
@@ -143,6 +145,7 @@ def base_shift(n):
     The numbers 1..7 are arranged along the bottom of the tree as 1..6
     at the bottom layer and then the 7 at the layer above::
 
+        sage: from amortizedHGM.hgm import base_shift
         sage: base_shift(7)
         6
 
@@ -174,6 +177,7 @@ def print_bottom_tree(tree, levels=2, spaces=4, print_shift=0):
 
     EXAMPLES::
 
+        sage: from amortizedHGM.hgm import build_tree, print_bottom_tree
         sage: tree = build_tree(list(range(1,8)))
         sage: print_bottom_tree(tree)
           2       12      30      7
@@ -211,6 +215,7 @@ def product_layer(layer):
 
     EXAMPLES::
 
+        sage: from amortizedHGM.hgm import product_layer
         sage: layer = list(range(1,15))
         sage: product_layer(layer)
         [2, 12, 30, 56, 90, 132, 182]
@@ -233,6 +238,7 @@ def build_tree(base):
 
     EXAMPLES::
 
+        sage: from amortizedHGM.hgm import build_tree
         sage: tree = build_tree(list(range(1,14)))
         sage: tree
         [None,
@@ -467,6 +473,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.hgm import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(100, alpha_beta=([1/6,5/6],[0,0]))
             sage: start, end, p = 0, 1/6, 97
             sage: shift, offset = H._starts_to_rationals[start][p % start.denominator()]
@@ -478,6 +485,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         TESTS::
 
+            sage: from amortizedHGM.hgm import AmortizingHypergeometricData
             sage: for cyca, cycb, start, end, p, t in [
             ....:     ([6], [1, 1], 0, 1/6, 97, 1),
             ....:     ([4, 2, 2], [3, 1, 1], 1/3, 1/2, 97, 1),
@@ -534,6 +542,8 @@ class AmortizingHypergeometricData(HypergeometricData):
     def fix_break(self, t, brk, p, d, pclass, feq_seed):
         r"""
         EXAMPLES::
+
+            sage: from amortizedHGM.hgm import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(100, cyclotomic=([22], [1, 1, 20]))
             sage: t, brk, p = 2312/231, 0, 101
             sage: M = H.fix_break(t=t, brk=brk, p=p)
@@ -689,6 +699,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.hgm import AmortizingHypergeometricData
             sage: for cyca, cycb, start, end, p, t in [
             ....:     ([6], [1, 1], 0, 1/6, 97, 1),
             ....:     ([4, 2, 2], [3, 1, 1], 1/3, 1/2, 97, 1),
@@ -786,6 +797,7 @@ class AmortizingHypergeometricData(HypergeometricData):
 
         TESTS::
 
+            sage: from amortizedHGM.hgm import AmortizingHypergeometricData
             sage: for cyca, cycb, t in [
             ...:    ([6], [1, 1], 331),
             ...:    ([4, 2, 2], [3, 1, 1],  3678),
@@ -911,6 +923,7 @@ class AccRemForest(object):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.hgm import AccRemForest
             sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
             sage: ARF._primes
             [5, 7, 11, 13, 17, 19]
@@ -924,6 +937,7 @@ class AccRemForest(object):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
             sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
             sage: ARF.primes
             [17, 19, 5, 7, 11, 13]
@@ -945,7 +959,8 @@ class AccRemForest(object):
 
         EXAMPLES::
 
-            sage: ARF =AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
+            sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
             sage: print_bottom_tree(ARF._value_tree, levels=6)
                                                                           263130836933693530167218012160000000
                                           20922789888000                                                  12576278705767096320000
@@ -974,6 +989,7 @@ class AccRemForest(object):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.hgm import AccRemForest
             sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
             sage: ARF.partial_factorial(5,10)
             15120
@@ -1050,6 +1066,7 @@ class AccRemForest(object):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.hgm import AccRemForest
             sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
             sage: ARF.factorial(6)
             720
@@ -1070,7 +1087,9 @@ class AccRemForest(object):
 
         EXAMPLES::
 
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)            sage: print_bottom_tree(ARF._moduli_tree, spaces=12, levels=4)
+            sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, lambda p: p > 3)
+            sage: print_bottom_tree(ARF._moduli_tree, spaces=12, levels=4)
                                                       6830089845471557190150625
                               627503752500625                                 10884540241
                   1500625                 418161601               83521                   130321
@@ -1090,6 +1109,7 @@ class AccRemForest(object):
 
         EXAMPLES::
 
+            sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
             sage: N, b, e, k = 15, 3, 4, 2
             sage: ARF = AccRemForest(N, {k: lambda p: ceil(k*p/b)}, lambda x: [elt for elt in range(1, x + 1)], e, lambda p: p > b)
             sage: ARF._primes
