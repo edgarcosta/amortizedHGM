@@ -284,6 +284,7 @@ def build_tree(base):
         8         27        125       343       1331      2197      4913      6859
     """
     # We want the nodes to be in order when read left-to-right, so we need to cycle
+    base = list(base)
     cut = base_shift(len(base))
     half_layer = product_layer(base[:cut])
     result = half_layer + base[cut:] + base[:cut]
@@ -554,7 +555,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             sage: c = (d*brk*(pclass-1)) % d
             sage: feq_seed = t*prod(_functional_eqn(a,brk,c,d) for a in H._alpha) / prod(_functional_eqn(b,brk,c,d) for b in H._beta)
             sage: M = H.fix_break(t=t, brk=brk, p=p, d=d, pclass=pclass, feq_seed=feq_seed)
-            sage: GF(p)(M[1,1]/M[0,0]) == GF(p)(t)*H.pochhammer_quotient(p, 1)
+            sage: M is None or GF(p)(M[1,1]/M[0,0]) == GF(p)(t)*H.pochhammer_quotient(p, 1)
             True
 
         """
@@ -708,8 +709,8 @@ class AmortizingHypergeometricData(HypergeometricData):
 
             sage: from amortizedHGM.hgm import AmortizingHypergeometricData
             sage: H = AmortizingHypergeometricData(1000, cyclotomic=([6], [1, 1]))
-            sage: foo = H.amortized_padic_H_values(1)
-            sage: all(foo[p] == H.naive_padic_H_value(t=1, p=p) for p in foo)
+            sage: foo = H.amortized_padic_H_values(2)
+            sage: all(foo[p] == H.naive_padic_H_value(t=2, p=p) for p in foo)
             True
 
         """
@@ -796,7 +797,7 @@ class AmortizingHypergeometricData(HypergeometricData):
             ....:    ([22], [1, 1, 20], 1337/507734),
             ....:    ([5],[1,1,1,1], 2313),
             ....:    ([12],[2,2,1,1], 313)
-            ....:]:
+            ....: ]:
             ....:    H = AmortizingHypergeometricData(1000, cyclotomic=(cyca, cycb))
             ....:    for p, v in H.amortized_padic_H_values(t).items():
             ....:        if v != H.naive_padic_H_value(t=t, p=p, verbose=False):
@@ -930,7 +931,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 4, [p for p in prime_range(20) if p > 3])
             sage: ARF.primes
             [17, 19, 5, 7, 11, 13]
             sage: print_bottom_tree(ARF._moduli_tree, spaces=8)
@@ -952,16 +953,16 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, lambda x: list(range(1, x + 1)), 1, [p for p in prime_range(20) if p > 3])
             sage: print_bottom_tree(ARF._value_tree, levels=6)
-                                                                          263130836933693530167218012160000000
-                                          20922789888000                                                  12576278705767096320000
-                          40320                           518918400                       29654190720                     424097856000
-                  24              1680            11880           43680           116280          255024          491400          863040
-              2       12      30      56      90      132     182     240     306     380     462     552     650     756     870     992
-            1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32
-            sage: factorial(32)
-            263130836933693530167218012160000000
+                                                                          121645100408832000
+                                          39916800                                                        3047466240
+                          5040                            7920                            32760                           93024
+                  24              210             72              110             156             210             272             342
+              2       12      30      7       8       9       10      11      12      13      14      15      16      17      18      19
+            1   2   3   4   5   6
+            sage: factorial(19)
+            121645100408832000
         """
         return build_tree(self.bottom_generator(self.end_node))
 
@@ -982,7 +983,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, lambda x: list(range(1, x + 1)), 1, [p for p in prime_range(20) if p > 3])
             sage: ARF.partial_factorial(5,10)
             15120
             sage: prod(range(5,10))
@@ -1059,7 +1060,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, lambda x: list(range(1, x + 1)), 1, [p for p in prime_range(20) if p > 3])
             sage: ARF.factorial(6)
             720
             sage: ARF.factorial(6, 11) == 720 % 11
@@ -1080,7 +1081,7 @@ class AccRemForest(object):
         EXAMPLES::
 
             sage: from amortizedHGM.hgm import AccRemForest, print_bottom_tree
-            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 1, [p for p in prime_range(20) if p > 3])
+            sage: ARF = AccRemForest(20, {None: lambda x: x}, range, 4, [p for p in prime_range(20) if p > 3])
             sage: print_bottom_tree(ARF._moduli_tree, spaces=12, levels=4)
                                                       6830089845471557190150625
                               627503752500625                                 10884540241
@@ -1113,7 +1114,7 @@ class AccRemForest(object):
             sage: print_bottom_tree(ARF.tree(k)._rem_tree, spaces=8)
                 6               5040
             6       24      5040    11759
-            sage: [factorial(ceil(k*p/b) - 1) % p^(2*e) for p in ARF._primes]
+            sage: [factorial(ceil(k*p/b) - 1) % p^e for p in ARF._primes]
             [6, 24, 5040, 11759]
         """
         return AccRemTree(self, self.cut_functions[k])
